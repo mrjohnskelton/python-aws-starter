@@ -1,0 +1,12 @@
+# Example S3 backend configuration. Copy to backend.tf and fill values, or
+# configure a different backend before running `terraform init`.
+
+terraform {
+  backend "s3" {
+    bucket         = "YOUR_BUCKET_NAME"
+    key            = "python-aws-starter/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-locks"
+    encrypt        = true
+  }
+}
