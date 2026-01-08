@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from enum import Enum
-from pydantic import Field
+from pydantic import BaseModel, Field
 from .base import BaseEntity
 from .sources import SourceAttribution
 
