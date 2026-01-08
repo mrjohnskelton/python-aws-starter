@@ -80,3 +80,29 @@ Acceptance criteria for the OPA:
 3. Documentation in `frontend/README.md` describing how to run the demo and change the API base.
 4. Example usage for developers: sample calls to `/search` and `/pivot` in the client code.
 
+### OPA Widget Design: Timeline & Map Separation
+
+The One-Page App includes two primary visualization widgets that should be presented separately to avoid overlap and provide distinct interaction patterns.
+
+#### Timeline Widget (Gantt-Chart Style)
+
+- Display events/episodes as horizontal bars positioned along a time axis.
+- Show "milestone" events (single-date events) as point markers along the timeline.
+- Bars should be color-coded by source trust level or custom color scheme.
+- Clicking a bar or milestone should select the corresponding item in the grid below.
+- Zoom controls should adjust the time scale (e.g., zoom out to centuries, zoom in to days).
+
+#### Map Widget (Static Image with Pins)
+
+- Use a static world map image (SVG or raster) as the background.
+- Place pins/markers at geographic coordinates of events/locations.
+- Pins should be clickable and show item title/description on hover or click.
+- Should work without relying on tile-based mapping services (Leaflet, Mapbox).
+- Color-code pins by dimension (events, people, geography) or trust level.
+
+#### Layout
+
+- Timeline and map should be displayed as separate, non-overlapping panels in the UI.
+- Responsive: on smaller screens, stack vertically; on larger screens, side-by-side or stacked layout.
+- Both widgets should update when users perform search, pivot, or zoom operations.
+

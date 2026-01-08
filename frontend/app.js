@@ -6,7 +6,6 @@ const summaryEl = $('#summary');
 let zoom = 2;
 let lastResults = [];
 let selectedItem = null;
-let map = null;
 let geoIndex = {};
 
 function setSummary(count, dim){
@@ -71,6 +70,7 @@ async function search(dim, q){
     if(!res.ok) throw new Error(await res.text())
     const body = await res.json();
     renderResults(body.results || body || [], dim);
+    updateVisualizations(body.results || body || [], dim);
   }catch(err){
     summaryEl.textContent = 'Error fetching results';
     console.error(err);
@@ -85,86 +85,118 @@ async function pivot(fromDim, toDim){
   if(!res.ok) return alert('Pivot failed');
   const body = await res.json();
   renderResults(body.results || body || [], toDim);
+  updateVisualizations(body.results || body || [], toDim);
 }
 
-function ensureMap(){
-  if(map) return map;
-  if(typeof L === 'undefined'){
-    // Leaflet not loaded yet — try to load via CDN dynamically
-    const s = document.createElement('script');
-    s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    s.onload = ()=>{ initMap(); }
-    document.body.appendChild(s);
-    return null;
-  }
-  return initMap();
+function updateVisualizations(items, dim){
+  renderGanttTimeline(items);
+  renderSVGMap(items);
 }
 
-function initMap(){
-  if(map) return map;
-  map = L.map('map', {attributionControl:false}).setView([48.8566,2.3522], 3);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19}).addTo(map);
-  return map;
+function renderGanttTimeline(items){
+  const el = document.getElementById('timeline');
+  el.innerHTML = '';
+  if(!items || items.length===0) return;
+  
+  const parsed = items.map(it=>{
+    const sd = (it.start_date && it.start_date.start_date) || (it.start_date && it.start_date) || it.birth_date || it.created_at;
+    const ed = (it.start_date && it.start_date.end_date) || (it.end_date && it.end_date) || it.death_date;
+    let startYear = null, endYear = null;
+    if(sd){
+      const m = sd.match(/-?\d{1,4}/);
+      if(m) startYear = parseInt(m[0],10);
+    }
+    if(ed){
+      const m = ed.match(/-?\d{1,4}/);
+      if(m) endYear = parseInt(m[0],10);
+    }
+    return {item:it, startYear, endYear};
+  }).filter(p=>p.startYear!==null).sort((a,b)=>a.startYear-b.startYear);
+  
+  if(parsed.length===0) return;
+  
+  const years = parsed.flatMap(p=>[p.startYear, p.endYear].filter(y=>y!==null));
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+  const range = Math.max(1, maxYear - minYear);
+  
+  const container = document.createElement('div');
+  container.style.position = 'relative';
+  
+  parsed.forEach((p, idx)=>{
+    const isRange = p.endYear !== null && p.endYear !== p.startYear;
+    const startPos = ((p.startYear - minYear) / range) * 100;
+    const endPos = isRange ? ((p.endYear - minYear) / range) * 100 : startPos + 3;
+    const width = Math.max(2, endPos - startPos);
+    
+    const bar = document.createElement('div');
+    bar.className = 'timeline-bar';
+    bar.style.width = width + '%';
+    bar.style.marginLeft = startPos + '%';
+    bar.style.opacity = Math.max(0.4, 1 - (p.item.confidence || 0.5) * 0.3);
+    bar.title = `${p.item.title||p.item.name} (${p.startYear}${p.endYear && p.endYear !== p.startYear ? '-'+p.endYear : ''})`;
+    bar.innerHTML = `<span>${p.item.title || p.item.name}</span>`;
+    
+    bar.addEventListener('click', ()=>{
+      const index = lastResults.indexOf(p.item);
+      const el = listEl.querySelector(`[data-index="${index}"]`);
+      if(el) el.focus(), selectItem(index, el);
+    });
+    
+    container.appendChild(bar);
+  });
+  
+  el.appendChild(container);
 }
 
-function clearMapMarkers(){
-  if(!map) return;
-  // remove all markers layer
-  map.eachLayer(layer=>{ if(layer && layer.options && layer.options.pane==='markerPane') map.removeLayer(layer) });
-}
-
-function addMapMarkers(items){
-  ensureMap();
-  if(!map) return;
-  clearMapMarkers();
+function renderSVGMap(items){
+  const svg = document.getElementById('mapCanvas');
+  if(!svg) return;
+  
+  svg.querySelectorAll('.map-pin').forEach(el=>el.remove());
+  
+  if(!items || items.length===0) return;
+  
+  const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
+  const svgWidth = viewBox[2], svgHeight = viewBox[3];
+  
   items.forEach(item=>{
-    if(!item.locations) return;
+    if(!item.locations || item.locations.length===0) return;
+    
     item.locations.forEach(loc=>{
       const geo = loc.geography_id ? geoIndex[loc.geography_id] : null;
       const lat = loc.latitude || (geo && geo.center_coordinate && geo.center_coordinate.latitude);
       const lon = loc.longitude || (geo && geo.center_coordinate && geo.center_coordinate.longitude);
-      if(lat && lon){
-        const mk = L.circleMarker([lat, lon], {radius:6, color:'#6366f1', fill:true, fillOpacity:0.9}).addTo(map);
-        mk.bindPopup(`<strong>${escapeHTML(item.title||item.name||item.id)}</strong><br>${escapeHTML(loc.name||'')}`);
+      
+      if(lat !== null && lon !== null){
+        const x = ((lon + 180) / 360) * svgWidth;
+        const y = ((90 - lat) / 180) * svgHeight;
+        
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'map-pin');
+        g.setAttribute('transform', `translate(${x},${y})`);
+        
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('r', '8');
+        circle.setAttribute('cx', '0');
+        circle.setAttribute('cy', '0');
+        
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `${item.title||item.name} - ${loc.name||''}`;
+        
+        g.appendChild(circle);
+        g.appendChild(title);
+        
+        g.addEventListener('click', ()=>{
+          const index = lastResults.indexOf(item);
+          const el = listEl.querySelector(`[data-index="${index}"]`);
+          if(el) el.focus(), selectItem(index, el);
+        });
+        
+        svg.appendChild(g);
       }
     })
   })
-}
-
-function renderTimeline(items){
-  const el = document.getElementById('timeline');
-  el.innerHTML = '';
-  if(!items || items.length===0) return;
-  // collect dates as years (approx)
-  const parsed = items.map(it=>{
-    const sd = (it.start_date && it.start_date.start_date) || (it.start_date && it.start_date) || it.birth_date || it.created_at;
-    let year = null;
-    if(sd){
-      const m = sd.match(/-?\d{1,4}/);
-      if(m) year = parseInt(m[0],10);
-    }
-    return {item:it, year: year};
-  }).filter(p=>p.year!==null).sort((a,b)=>a.year-b.year);
-  if(parsed.length===0) return;
-  const years = parsed.map(p=>p.year);
-  const min = Math.min(...years), max = Math.max(...years);
-  const range = Math.max(1, max-min);
-  const bar = document.createElement('div'); bar.className='bar';
-  parsed.forEach((p, idx)=>{
-    const pos = ((p.year - min)/range)*100;
-    const tick = document.createElement('div');
-    tick.className='tick';
-    tick.style.left = pos+'%';
-    tick.innerHTML = `<div title="${p.year}">●</div><div style="font-size:0.75rem;margin-top:0.25rem">${p.year}</div>`;
-    tick.addEventListener('click', ()=>{
-      // find and select in list
-      const index = lastResults.indexOf(p.item);
-      const el = listEl.querySelector(`[data-index=\"${index}\"]`);
-      if(el) el.focus(), selectItem(index, el);
-    });
-    bar.appendChild(tick);
-  });
-  el.appendChild(bar);
 }
 
 // UI wiring
@@ -176,7 +208,9 @@ $('#searchForm').addEventListener('submit', e=>{
 });
 
 $('#clearBtn').addEventListener('click', ()=>{
-  $('#q').value=''; renderResults([], $('#dimension').value);
+  $('#q').value=''; 
+  renderResults([], $('#dimension').value);
+  updateVisualizations([], $('#dimension').value);
 });
 
 $('#pivotBtn').addEventListener('click', ()=>{
@@ -223,13 +257,10 @@ $('#loadLocal').addEventListener('click', async ()=>{
   try{
     const res = await fetch('fixtures/sample_dataset.json');
     const body = await res.json();
-    // prefer events for timeline/map demo
     const items = body.events || [];
-    // build geo index
     if(body.geographies){ body.geographies.forEach(g=>{ geoIndex[g.id]=g }) }
     renderResults(items, 'events');
-    addMapMarkers(items);
-    renderTimeline(items);
+    updateVisualizations(items, 'events');
   }catch(err){
     alert('Failed to load local sample data: '+err.message);
   }

@@ -68,8 +68,15 @@
         </div>
 
         <div id="visuals" class="visuals">
-          <div id="map" class="map" aria-label="Map view"></div>
-          <div id="timeline" class="timeline" aria-label="Timeline view"></div>
+          <div id="timelineWidget" class="widget">
+            <h3>Timeline</h3>
+            <div id="timeline" class="timeline" aria-label="Timeline view"></div>
+          </div>
+
+          <div id="mapWidget" class="widget">
+            <h3>Map</h3>
+            <svg id="mapCanvas" class="map-canvas" viewBox="0 0 1000 600" aria-label="World map with event locations"></svg>
+          </div>
         </div>
 
         <ul id="list" class="list" role="list"></ul>
