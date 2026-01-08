@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from .base import BaseEntity
 from .sources import SourceAttribution
 
@@ -17,14 +17,15 @@ class DateRange(BaseModel):
         description="Precision level: year, month, day, or era",
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "start_date": "1939-09-01",
                 "end_date": "1945-09-02",
                 "precision": "day",
             }
         }
+    )
 
 
 class PersonReference(BaseModel):
@@ -75,8 +76,8 @@ class Event(BaseEntity):
         None, description="Notes on conflicting data between sources"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "event_wwii_001",
                 "title": "World War II",
@@ -98,3 +99,4 @@ class Event(BaseEntity):
                 "confidence": 0.95,
             }
         }
+    )

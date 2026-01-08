@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from .base import BaseEntity
 from .sources import SourceAttribution
 
@@ -64,8 +64,8 @@ class Person(BaseEntity):
         None, description="Notes on conflicting data between sources"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "person_napoleon",
                 "name": "Napoleon Bonaparte",
@@ -77,3 +77,4 @@ class Person(BaseEntity):
                 "confidence": 0.99,
             }
         }
+    )

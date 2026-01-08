@@ -1,9 +1,9 @@
 """Models for user contributions and edits."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ContributionType(str, Enum):
@@ -68,12 +68,12 @@ class UserContribution(BaseModel):
     )
     
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     reviewed_at: Optional[datetime] = Field(None, description="When was this reviewed?")
     merged_at: Optional[datetime] = Field(None, description="When was this merged?")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "contrib_001",
                 "user_id": "user_123",
@@ -87,3 +87,4 @@ class UserContribution(BaseModel):
                 "created_at": "2026-01-08T10:00:00Z",
             }
         }
+    )

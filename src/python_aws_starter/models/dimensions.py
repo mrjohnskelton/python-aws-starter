@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Dict, Any
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from .base import BaseEntity
 
 
@@ -65,8 +65,8 @@ class Dimension(BaseEntity):
         None, description="Custom configuration for this dimension"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "dim_timeline",
                 "name": "Timeline",
@@ -88,3 +88,4 @@ class Dimension(BaseEntity):
                 "zoom_levels": ["era", "century", "decade", "year", "month", "day"],
             }
         }
+    )

@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ValidationStatus(str, Enum):
@@ -32,8 +32,8 @@ class DataQuality(BaseModel):
     validator_id: Optional[str] = Field(None, description="Who validated this data?")
     issues: List[str] = Field(default_factory=list, description="Known issues or caveats")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "validation_status": "peer_reviewed",
                 "requires_review": False,
@@ -41,3 +41,4 @@ class DataQuality(BaseModel):
                 "last_validated": "2026-01-08T10:00:00Z",
             }
         }
+    )

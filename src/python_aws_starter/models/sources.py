@@ -1,9 +1,9 @@
 """Models for tracking data sources and provenance."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class SourceType(str, Enum):
@@ -28,12 +28,12 @@ class DataSource(BaseModel):
         description="Trust level from 0.0 (low) to 1.0 (curated)",
     )
     description: Optional[str] = Field(None, description="Description of the source")
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     refresh_frequency: Optional[str] = Field(None, description="e.g., 'daily', 'manual'")
     base_url: Optional[str] = Field(None, description="Base URL for API or web sources")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "wikipedia",
                 "name": "Wikipedia",
@@ -43,6 +43,7 @@ class DataSource(BaseModel):
                 "refresh_frequency": "weekly",
             }
         }
+    )
 
 
 class SourceAttribution(BaseModel):
@@ -63,10 +64,10 @@ class SourceAttribution(BaseModel):
         None, description="ID in external system (e.g., Wikipedia article ID)"
     )
     url: Optional[str] = Field(None, description="Link to original source")
-    last_verified: datetime = Field(default_factory=datetime.utcnow)
+    last_verified: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "source_id": "wikipedia",
                 "source_name": "Wikipedia",
@@ -76,3 +77,4 @@ class SourceAttribution(BaseModel):
                 "url": "https://en.wikipedia.org/wiki/Example",
             }
         }
+    )

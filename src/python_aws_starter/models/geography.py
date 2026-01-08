@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from .base import BaseEntity
 from .sources import SourceAttribution
 
@@ -96,8 +96,8 @@ class Geography(BaseEntity):
         None, description="Notes on conflicting data between sources"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "geo_france",
                 "name": "France",
@@ -108,3 +108,4 @@ class Geography(BaseEntity):
                 "confidence": 0.99,
             }
         }
+    )

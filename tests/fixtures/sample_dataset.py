@@ -372,3 +372,16 @@ def get_person_by_id(pid: str) -> Person:
 
 def get_geo_by_id(gid: str) -> Geography:
     return next(g for g in GEOGRAPHIES if g.id == gid)
+
+
+# Convenience list getters for tests and demo usage
+def get_events() -> list:
+    return list(EVENTS)
+
+
+def get_people() -> list:
+    return list(PEOPLE)
+
+
+def get_geographies() -> list:
+    return list(GEOGRAPHIES)
