@@ -15,7 +15,9 @@ def test_event_creation():
         id="event_001",
         title="Test Event",
         description="A test event for validation",
-        start_date=DateRange(start_date="2020-01-01"),
+        start_date=DateRange(start_date="2020-01-01", end_date=None),
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="test_user",
         last_modified_by="test_user",
     )
@@ -30,6 +32,12 @@ def test_person_creation():
         id="person_001",
         name="Albert Einstein",
         description="Theoretical physicist",
+        birth_date=None,
+        death_date=None,
+        birth_location=None,
+        death_location=None,
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="test_user",
         last_modified_by="test_user",
     )
@@ -44,6 +52,13 @@ def test_geography_creation():
         name="France",
         geography_type=GeographyType.COUNTRY,
         description="European nation",
+        center_coordinate=None,
+        boundaries=None,
+        parent_geography_id=None,
+        climate=None,
+        geology=None,
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="test_user",
         last_modified_by="test_user",
     )
@@ -58,6 +73,10 @@ def test_dimension_creation():
         name="Timeline",
         dimension_type=DimensionType.TIMELINE,
         description="Navigate by time",
+        icon=None,
+        color=None,
+        zoom_levels=None,
+        configuration=None,
         created_by="test_user",
         last_modified_by="test_user",
     )
@@ -72,6 +91,9 @@ def test_data_source_creation():
         name="Wikipedia",
         source_type=SourceType.SCRAPED,
         trust_level=0.7,
+        description=None,
+        refresh_frequency=None,
+        base_url=None,
     )
     assert source.name == "Wikipedia"
     assert 0 <= source.trust_level <= 1
@@ -85,21 +107,27 @@ def test_event_with_multi_source():
         id="event_001",
         title="World War II",
         description="Major global conflict",
-        start_date=DateRange(start_date="1939-09-01"),
+        start_date=DateRange(start_date="1939-09-01", end_date=None),
         sources=[
             SourceAttribution(
                 source_id="wikipedia",
                 source_name="Wikipedia",
                 trust_level=0.7,
                 fields_contributed=["title", "description"],
+                external_id=None,
+                url=None,
             ),
             SourceAttribution(
                 source_id="bbc_history",
                 source_name="BBC History",
                 trust_level=0.85,
                 fields_contributed=["dates", "key_figures"],
+                external_id=None,
+                url=None,
             ),
         ],
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="data_importer",
         last_modified_by="data_importer",
     )

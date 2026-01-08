@@ -78,3 +78,35 @@ The frontend must load and render very quickly with minimal processing on the cl
 - [ ] Add accessibility features (a11y)
 - [ ] Performance optimization
 - [ ] Mobile PWA support
+
+## Local demo: Lightweight One-Page App (OPA)
+
+A small, self-contained One-Page App (OPA) is included for quick demo and exploration of the API. It is intentionally lightweight (vanilla JS + CSS) so it can be served statically and used as a reference UI.
+
+Files included in this repository under `frontend/`:
+
+- `index.html` — single page app markup
+- `style.css` — modern, accessible styling
+- `app.js` — client logic: search, pivot, zoom, keyboard navigation
+
+Running the demo:
+
+1. Start the API (see project README):
+
+```bash
+docker-compose up --build
+```
+
+2. Serve the `frontend/` directory and open in a browser:
+
+```bash
+cd frontend
+python3 -m http.server 8080
+# open http://localhost:8080
+```
+
+Notes:
+
+- The SPA expects the API at `http://localhost:8000` by default. If your API runs elsewhere, update `API_BASE` in `app.js`.
+- Accessibility: keyboard support (Enter to select, `n`/`p` to navigate), ARIA labels, and visible focus styles are provided.
+- Use the Zoom controls to change detail density and the Pivot controls to fetch related dimension results.

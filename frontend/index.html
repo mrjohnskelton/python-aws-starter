@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Python AWS Starter — Explorer</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+e2H4gk9b2TLV0gqXk2kPqjtkGk7o5x3p3hKp3mXQ=" crossorigin=""/>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <h1>Explorer</h1>
+      <p class="lead">Search, pivot and visualise dataset dimensions</p>
+    </header>
+
+    <main class="layout">
+      <aside class="panel" aria-label="Controls">
+        <form id="searchForm" aria-labelledby="searchHeading">
+          <h2 id="searchHeading">Search</h2>
+
+          <label for="dimension">Dimension</label>
+          <select id="dimension" name="dimension">
+            <option value="events">Events</option>
+            <option value="people">People</option>
+            <option value="geography">Geography</option>
+          </select>
+
+          <label for="q">Query / id</label>
+          <input id="q" name="q" placeholder="text or id (optional)" />
+
+          <div class="row">
+            <button type="submit" class="btn primary">Search</button>
+            <button id="clearBtn" type="button" class="btn">Clear</button>
+          </div>
+        </form>
+
+        <section aria-labelledby="pivotHeading" class="pivot">
+          <h2 id="pivotHeading">Pivot</h2>
+          <p class="muted">Select an item to pivot from, then choose target dimension.</p>
+          <div class="row">
+            <label for="target">To</label>
+            <select id="target">
+              <option value="events">Events</option>
+              <option value="people">People</option>
+              <option value="geography">Geography</option>
+            </select>
+            <button id="pivotBtn" class="btn">Pivot</button>
+          </div>
+        </section>
+
+        <section aria-labelledby="zoomHeading">
+          <h2 id="zoomHeading">Zoom</h2>
+          <p class="muted">Adjust result density / detail level</p>
+          <div class="zoomControls">
+            <button class="btn" data-zoom="-1" id="zoomOut">−</button>
+            <div id="zoomLevel" aria-live="polite">2</div>
+            <button class="btn" data-zoom="+1" id="zoomIn">+</button>
+          </div>
+        </section>
+
+      </aside>
+
+      <section class="content" id="results" aria-live="polite">
+        <div id="summary" class="summary">No results yet.</div>
+        <div class="toolbar">
+          <button id="loadLocal" class="btn">Load local sample data</button>
+        </div>
+
+        <div id="visuals" class="visuals">
+          <div id="map" class="map" aria-label="Map view"></div>
+          <div id="timeline" class="timeline" aria-label="Timeline view"></div>
+        </div>
+
+        <ul id="list" class="list" role="list"></ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <small>Local demo — fetches from <span id="apiBase">http://localhost:8000</span></small>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

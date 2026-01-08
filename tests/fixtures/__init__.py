@@ -17,6 +17,8 @@ def wikipedia_source():
         source_type=SourceType.SCRAPED,
         trust_level=0.7,
         description="Data scraped from Wikipedia",
+        refresh_frequency=None,
+        base_url=None,
     )
 
 
@@ -29,6 +31,8 @@ def bbc_source():
         source_type=SourceType.CURATED,
         trust_level=0.9,
         description="Historical data from BBC",
+        refresh_frequency=None,
+        base_url=None,
     )
 
 
@@ -39,17 +43,20 @@ def sample_event_wwii():
         id="event_wwii",
         title="World War II",
         description="Major global military conflict spanning 1939-1945",
-        start_date=DateRange(start_date="1939-09-01", precision="day"),
-        end_date=DateRange(start_date="1945-09-02", precision="day"),
+        start_date=DateRange(start_date="1939-09-01", end_date="1945-09-02", precision="day"),
+        end_date=None,
         sources=[
             SourceAttribution(
                 source_id="wikipedia",
                 source_name="Wikipedia",
                 trust_level=0.7,
                 fields_contributed=["title", "description"],
+                external_id=None,
                 url="https://en.wikipedia.org/wiki/World_War_II",
             )
         ],
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="data_importer",
         last_modified_by="data_importer",
     )
@@ -64,9 +71,12 @@ def sample_person_churchill():
         birth_date="1874-11-30",
         death_date="1965-01-24",
         birth_location="Woodstock, England",
+        death_location=None,
         description="British statesman and military officer",
         occupations=["politician", "military officer", "author"],
         nationalities=["British"],
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="data_importer",
         last_modified_by="data_importer",
     )
@@ -80,8 +90,13 @@ def sample_geography_uk():
         name="United Kingdom",
         geography_type=GeographyType.COUNTRY,
         description="Island nation in northwestern Europe",
-        center_coordinate=Coordinate(latitude=55.3781, longitude=-3.4360),
+        center_coordinate=Coordinate(latitude=55.3781, longitude=-3.4360, elevation=None),
+        boundaries=None,
+        parent_geography_id=None,
         climate="temperate oceanic",
+        geology=None,
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="data_importer",
         last_modified_by="data_importer",
     )
@@ -95,9 +110,13 @@ def sample_geography_france():
         name="France",
         geography_type=GeographyType.COUNTRY,
         description="Western European nation",
-        center_coordinate=Coordinate(latitude=46.2276, longitude=2.2137),
+        center_coordinate=Coordinate(latitude=46.2276, longitude=2.2137, elevation=None),
         parent_geography_id="geo_europe",
+        boundaries=None,
         climate="temperate",
+        geology=None,
+        source_of_truth=None,
+        conflict_notes=None,
         created_by="data_importer",
         last_modified_by="data_importer",
     )

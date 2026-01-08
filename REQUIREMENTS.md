@@ -59,3 +59,24 @@ The **Timeline Application** is a highly-interactive visual interface for explor
 - Check the appropriate requirements document
 - Review related ADRs in [docs/decisions/](docs/decisions/)
 - Open an issue for clarification or updates
+
+## Frontend: One-Page App (OPA) Requirement
+
+We will provide a lightweight, accessible One-Page App (OPA) as a demo and reference implementation for the UI. The OPA serves two purposes: a) a minimal, production-adjacent UI for stakeholders to try pivot/search/zoom interactions and b) a canonical example demonstrating API usage for front-end developers.
+
+Primary expectations for the OPA:
+
+- Provide search UI to query dimensions (`/search/{dimension}`) and display results in an accessible grid/list.
+- Provide pivot controls to switch from one dimension to another (`/pivot?from=...&to=...&id=...`).
+- Provide Zoom controls to change result density/detail level; zoom levels should be exposed to users and affect rendered detail.
+- Accessibility: ARIA labels, keyboard navigation (tab/Enter), visible focus states, and sufficient color contrast.
+- Lightweight and static: implementable with vanilla JS (no heavy framework required for demo) and runnable via a simple static server (`python -m http.server`) or embedded in the production frontend build.
+- Configurable API base URL for local testing (default `http://localhost:8000`).
+
+Acceptance criteria for the OPA:
+
+1. Demonstrable search, pivot and zoom interactions against the running demo API.
+2. Basic keyboard navigation and ARIA labels present for primary controls.
+3. Documentation in `frontend/README.md` describing how to run the demo and change the API base.
+4. Example usage for developers: sample calls to `/search` and `/pivot` in the client code.
+

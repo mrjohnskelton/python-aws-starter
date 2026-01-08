@@ -8,6 +8,15 @@ from python_aws_starter.models.sources import DataSource, SourceType, SourceAttr
 from python_aws_starter.models.geography import Geography, GeographyType, Coordinate, TemporalGeography
 from python_aws_starter.models.people import Person, OrganizationReference, PersonReference
 from python_aws_starter.models.events import Event, DateRange, GeographicReference, PersonReference as EventPersonRef
+"""Sample dataset for testing cross-dimensional pivots.
+
+Provides sample DataSource, Geography, Person and Event instances
+that are interlinked to facilitate pivoting between dimensions.
+"""
+from python_aws_starter.models.sources import DataSource, SourceType, SourceAttribution
+from python_aws_starter.models.geography import Geography, GeographyType, Coordinate
+from python_aws_starter.models.people import Person
+from python_aws_starter.models.events import Event, DateRange, GeographicReference, PersonReference as EventPersonRef
 from python_aws_starter.models.dimensions import Dimension, DimensionType, DimensionField
 
 # Data sources
@@ -18,6 +27,8 @@ DATA_SOURCES = [
         source_type=SourceType.SCRAPED,
         trust_level=0.7,
         description="Public encyclopedia entries",
+        refresh_frequency="weekly",
+        base_url="https://en.wikipedia.org/",
     ),
     DataSource(
         id="curated_internal",
@@ -25,6 +36,8 @@ DATA_SOURCES = [
         source_type=SourceType.CURATED,
         trust_level=0.95,
         description="Provenance-controlled internal dataset",
+        refresh_frequency=None,
+        base_url=None,
     ),
     DataSource(
         id="user_submission",
@@ -32,17 +45,19 @@ DATA_SOURCES = [
         source_type=SourceType.USER_GENERATED,
         trust_level=0.5,
         description="Contributions from power users pending review",
+        refresh_frequency=None,
+        base_url=None,
     ),
 ]
 
-# Geographies (7 examples)
+# Geographies (examples)
 GEOGRAPHIES = [
     Geography(
         id="geo_europe",
         name="Europe",
         geography_type=GeographyType.CONTINENT,
         description="Continent of Europe",
-        center_coordinate=Coordinate(latitude=54.5260, longitude=15.2551),
+        center_coordinate=Coordinate(latitude=54.5260, longitude=15.2551, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
     ),
@@ -52,7 +67,7 @@ GEOGRAPHIES = [
         geography_type=GeographyType.COUNTRY,
         description="France",
         parent_geography_id="geo_europe",
-        center_coordinate=Coordinate(latitude=46.2276, longitude=2.2137),
+        center_coordinate=Coordinate(latitude=46.2276, longitude=2.2137, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
     ),
@@ -62,7 +77,7 @@ GEOGRAPHIES = [
         geography_type=GeographyType.CITY,
         description="Capital of France",
         parent_geography_id="geo_france",
-        center_coordinate=Coordinate(latitude=48.8566, longitude=2.3522),
+        center_coordinate=Coordinate(latitude=48.8566, longitude=2.3522, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
     ),
@@ -72,7 +87,7 @@ GEOGRAPHIES = [
         geography_type=GeographyType.REGION,
         description="Region in northern France",
         parent_geography_id="geo_france",
-        center_coordinate=Coordinate(latitude=49.1829, longitude=-0.3707),
+        center_coordinate=Coordinate(latitude=49.1829, longitude=-0.3707, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
     ),
@@ -82,7 +97,7 @@ GEOGRAPHIES = [
         geography_type=GeographyType.COUNTRY,
         description="United Kingdom",
         parent_geography_id="geo_europe",
-        center_coordinate=Coordinate(latitude=55.3781, longitude=-3.4360),
+        center_coordinate=Coordinate(latitude=55.3781, longitude=-3.4360, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
     ),
@@ -92,7 +107,7 @@ GEOGRAPHIES = [
         geography_type=GeographyType.VILLAGE,
         description="Site of the Battle of Waterloo (modern Belgium)",
         parent_geography_id="geo_europe",
-        center_coordinate=Coordinate(latitude=50.6806, longitude=4.4128),
+        center_coordinate=Coordinate(latitude=50.6806, longitude=4.4128, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
     ),
@@ -102,13 +117,13 @@ GEOGRAPHIES = [
         geography_type=GeographyType.CITY,
         description="Ancient and modern capital of Italy",
         parent_geography_id="geo_europe",
-        center_coordinate=Coordinate(latitude=41.9028, longitude=12.4964),
+        center_coordinate=Coordinate(latitude=41.9028, longitude=12.4964, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
     ),
 ]
 
-# People (7 examples)
+# People (examples)
 PEOPLE = [
     Person(
         id="person_napoleon",
@@ -117,6 +132,7 @@ PEOPLE = [
         birth_date="1769-08-15",
         death_date="1821-05-05",
         birth_location="Ajaccio, Corsica",
+        death_location=None,
         occupations=["military leader", "emperor"],
         nationalities=["French"],
         created_by="sample_data",
@@ -129,6 +145,8 @@ PEOPLE = [
         birth_date="1874-11-30",
         death_date="1965-01-24",
         occupations=["politician", "writer"],
+        birth_location=None,
+        death_location=None,
         nationalities=["British"],
         created_by="sample_data",
         last_modified_by="sample_data",
@@ -190,7 +208,7 @@ PEOPLE = [
     ),
 ]
 
-# Events (7 examples) with cross references to PEOPLE and GEOGRAPHIES
+# Events (examples) with cross references to PEOPLE and GEOGRAPHIES
 EVENTS = [
     Event(
         id="event_french_revolution",
@@ -225,6 +243,8 @@ EVENTS = [
                 source_name="Curated Internal",
                 trust_level=0.95,
                 fields_contributed=["title", "dates"],
+                external_id=None,
+                url=None,
             )
         ],
         confidence=0.9,
@@ -367,8 +387,10 @@ DIMENSIONS = [
 def get_event_by_id(eid: str) -> Event:
     return next(e for e in EVENTS if e.id == eid)
 
+
 def get_person_by_id(pid: str) -> Person:
     return next(p for p in PEOPLE if p.id == pid)
+
 
 def get_geo_by_id(gid: str) -> Geography:
     return next(g for g in GEOGRAPHIES if g.id == gid)
