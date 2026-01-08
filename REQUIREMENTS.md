@@ -1,56 +1,61 @@
 # Project Requirements
 
-Use this file to capture functional, non-functional and infrastructure requirements.
+This is an index of all project requirements. Detailed requirements are organized in the `docs/requirements/` directory.
 
-## Functional Requirements
+## Quick Links
 
-### Overall Description
+### Functional Requirements
+- [Overview](docs/requirements/functional/index.md)
+- [Multi-Dimensional Navigation](docs/requirements/functional/multi-dimensional-navigation.md)
+- [Zoom Functionality](docs/requirements/functional/zoom-functionality.md)
+- [Data Sourcing](docs/requirements/functional/data-sourcing.md)
+- [User Contributions](docs/requirements/functional/user-contributions.md)
 
-This solution creates a highly-interactive visual timeline of historical and geographical events.  The solution enables the user to:
-* View events/episodes of history, people, geography, geology, spheres of influence and other topics or categories as dimensions that can be navigated or pivotted between.
-* Where meaningful and there is available data, to pivot between different dimensions (for example):
-  *  Timeline - for example:
-     *  Which historical events/episodes affected France over time?
-     *  Where were the continents during the Jurrasic age?
-  *  Geography - for example:
-     *  What else happened in this region at different times?
-     *  How have geology, geography, borders or ruling systems/famillies changed in this geography?
-  *  People - for example: 
-     *  What else did Napoleon do (by geography or time)?
-     *  Where else did Neaderthal peoples spread to?
-  *  Events/episodes in history - for example:
-     *  How did the front-lines change during the first world war?
-     *  How did the Babylonian empire expand over time?
-* Where data provides he linkage, it should be possible to zoom in or out along any of the dimensions - for example:
-  * Timeline - should be capable of zooming from geological ages to milliseconds (e.g. in the case of the first few moments of the Universe).
-  * Geography - should be capable of zooming into a village or street and out to the whole Universe.
-  * People - should be capable of zooming from a single figure (e.g. Adolf Hitler) through organisations (e.g. the National Socialist or Nazi party) through nationalities (e.g. German) or general tribes or regions (e.g. Europeans or Homo Sapiens).
-  * Events/episodes in history - should be capable of zooming from an individual event (e.g. the assassination of Archduke Ferdinand) to consequence episodes (e.g. the First World War) and broader spans (e.g. Wiemar Germany).
+### Non-Functional Requirements
+- [Overview](docs/requirements/non-functional/index.md)
+- [User Experience](docs/requirements/non-functional/user-experience.md)
+- [Performance](docs/requirements/non-functional/performance.md)
+- [Browser Compatibility](docs/requirements/non-functional/browser-compatibility.md)
+- [Technical Standards](docs/requirements/non-functional/technical-standards.md)
+- [Scalability](docs/requirements/non-functional/scalability.md)
+- [Security](docs/requirements/non-functional/security.md)
 
-## Non-Functional Requirements
-- Python version: 3.8+
-- Testing: pytest
-- Linting: black / flake8 (optional)
+### Infrastructure
+- [Infrastructure Requirements](docs/requirements/infrastructure.md)
+- [Acceptance Criteria](docs/requirements/acceptance-criteria.md)
 
-## Overall Non-Functional Requirements
+### Architecture & Decisions
+- [Architecture Decision Records](docs/decisions/)
 
-The User Interface and Experience must be engaging and intuitive to use.  The experience should be highly graphical and feel modern.
+## Project Overview
 
-The interface must load and render very quickly with minimal processing time on the end-users device.
+The **Timeline Application** is a highly-interactive visual interface for exploring historical and geographical events across multiple dimensions (time, geography, people, events). Users can seamlessly pivot between dimensions, zoom to different levels of detail, and explore data from multiple curated, public, and user-contributed sources.
 
-The interface should initially work in the main browsers (Chrome, Safari, Firefox, Edge) but should be capable of moving to an App delivery model for mobile platforms in the future.
+### Key Capabilities
 
-It should be easy to add other dimensions in the future besides those describes already.
+1. **Multi-Dimensional Pivoting**: Navigate and pivot between timeline, geography, people, and events dimensions
+2. **Hierarchical Zoom**: Explore data at different scales (from geological ages to milliseconds, villages to planetary)
+3. **Multi-Source Integration**: Combine data from curated sources, public data, and user submissions
+4. **User Contributions**: Enable power users to submit corrections and new data with a review workflow
 
-It should not be necessary to cross-reference source data to pivot between dimensions.  Pivoting should be done on the basis of available data based on the current context that each user is in.
+## Development Standards
 
-## Infrastructure / Terraform Requirements
-- AWS account details and region
-- Managed resources (e.g., VPC, subnets, ECS/EKS, RDS)
-- State backend (e.g., S3 + DynamoDB) — capture decisions here
+- **Python**: 3.8+
+- **Testing**: pytest (target ≥80% coverage)
+- **Linting**: black / flake8 (recommended)
+- **Frontend**: Modern JavaScript (TypeScript recommended)
+- **CI/CD**: Automated testing and linting on all PRs
 
-## Acceptance Criteria
-- 
+## How to Use This Documentation
 
-## Notes
-- Keep decisions and constraints here for future Terraform design.
+1. **Finding Requirements**: Use the quick links above or browse `docs/requirements/`
+2. **Tracking Changes**: See [CHANGELOG.md](CHANGELOG.md) for recent updates
+3. **Adding Requirements**: Create detailed spec in appropriate directory
+4. **Making Decisions**: Document in [docs/decisions/](docs/decisions/)
+5. **Checking Progress**: See [Acceptance Criteria](docs/requirements/acceptance-criteria.md)
+
+## Questions?
+
+- Check the appropriate requirements document
+- Review related ADRs in [docs/decisions/](docs/decisions/)
+- Open an issue for clarification or updates
