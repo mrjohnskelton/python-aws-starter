@@ -1,0 +1,10 @@
+[project]
+name = "python-aws-starter"
+version = "0.1.0"
+description = "Starter Python project to add Terraform for AWS"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
