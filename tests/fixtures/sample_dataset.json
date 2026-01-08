@@ -1,0 +1,836 @@
+{
+  "events": [
+    {
+      "id": "event_french_revolution",
+      "created_at": "2026-01-08 14:39:33.514551",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514552",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "title": "French Revolution",
+      "description": "Period of radical social and political change in France (1789–1799)",
+      "start_date": {
+        "start_date": "1789-05-05",
+        "end_date": "1799-11-09",
+        "precision": "year"
+      },
+      "end_date": null,
+      "locations": [
+        {
+          "geography_id": "geo_france",
+          "name": "France",
+          "latitude": null,
+          "longitude": null
+        }
+      ],
+      "related_people": [
+        {
+          "person_id": "person_napoleon",
+          "name": "Napoleon Bonaparte",
+          "role": "Rising Leader"
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "wikipedia",
+          "source_name": "Wikipedia",
+          "trust_level": 0.7,
+          "fields_contributed": [
+            "title",
+            "dates",
+            "description"
+          ],
+          "external_id": null,
+          "url": "https://en.wikipedia.org/wiki/French_Revolution",
+          "last_verified": "2026-01-08 14:39:33.514547"
+        }
+      ],
+      "source_of_truth": null,
+      "confidence": 0.85,
+      "conflict_notes": null
+    },
+    {
+      "id": "event_waterloo",
+      "created_at": "2026-01-08 14:39:33.514563",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514564",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "title": "Battle of Waterloo",
+      "description": "Decisive battle near Waterloo in 1815 ending Napoleon's rule.",
+      "start_date": {
+        "start_date": "1815-06-18",
+        "end_date": null,
+        "precision": "day"
+      },
+      "end_date": null,
+      "locations": [
+        {
+          "geography_id": "geo_waterloo",
+          "name": "Waterloo",
+          "latitude": null,
+          "longitude": null
+        }
+      ],
+      "related_people": [
+        {
+          "person_id": "person_napoleon",
+          "name": "Napoleon Bonaparte",
+          "role": "Commander"
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "curated_internal",
+          "source_name": "Curated Internal",
+          "trust_level": 0.95,
+          "fields_contributed": [
+            "title",
+            "dates"
+          ],
+          "external_id": null,
+          "url": null,
+          "last_verified": "2026-01-08 14:39:33.514561"
+        }
+      ],
+      "source_of_truth": null,
+      "confidence": 0.9,
+      "conflict_notes": null
+    },
+    {
+      "id": "event_wwii",
+      "created_at": "2026-01-08 14:39:33.514576",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514576",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "title": "World War II",
+      "description": "Global war from 1939 to 1945",
+      "start_date": {
+        "start_date": "1939-09-01",
+        "end_date": "1945-09-02",
+        "precision": "day"
+      },
+      "end_date": null,
+      "locations": [
+        {
+          "geography_id": "geo_europe",
+          "name": "Europe",
+          "latitude": null,
+          "longitude": null
+        },
+        {
+          "geography_id": "geo_uk",
+          "name": "United Kingdom",
+          "latitude": null,
+          "longitude": null
+        }
+      ],
+      "related_people": [
+        {
+          "person_id": "person_churchill",
+          "name": "Winston Churchill",
+          "role": "Allied Leader"
+        },
+        {
+          "person_id": "person_hitler",
+          "name": "Adolf Hitler",
+          "role": "Axis Leader"
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "wikipedia",
+          "source_name": "Wikipedia",
+          "trust_level": 0.7,
+          "fields_contributed": [
+            "dates",
+            "overview"
+          ],
+          "external_id": null,
+          "url": "https://en.wikipedia.org/wiki/World_War_II",
+          "last_verified": "2026-01-08 14:39:33.514574"
+        }
+      ],
+      "source_of_truth": null,
+      "confidence": 0.95,
+      "conflict_notes": null
+    },
+    {
+      "id": "event_hastings",
+      "created_at": "2026-01-08 14:39:33.514582",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514583",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "title": "Battle of Hastings",
+      "description": "1066 battle leading to Norman conquest of England",
+      "start_date": {
+        "start_date": "1066-10-14",
+        "end_date": null,
+        "precision": "day"
+      },
+      "end_date": null,
+      "locations": [
+        {
+          "geography_id": "geo_uk",
+          "name": "England",
+          "latitude": null,
+          "longitude": null
+        }
+      ],
+      "related_people": [],
+      "sources": [
+        {
+          "source_id": "wikipedia",
+          "source_name": "Wikipedia",
+          "trust_level": 0.7,
+          "fields_contributed": [
+            "title",
+            "dates"
+          ],
+          "external_id": null,
+          "url": null,
+          "last_verified": "2026-01-08 14:39:33.514581"
+        }
+      ],
+      "source_of_truth": null,
+      "confidence": 0.8,
+      "conflict_notes": null
+    },
+    {
+      "id": "event_fall_rome",
+      "created_at": "2026-01-08 14:39:33.514594",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514594",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "title": "Fall of the Western Roman Empire",
+      "description": "Traditional date for the fall of Rome in 476 CE",
+      "start_date": {
+        "start_date": "0476-09-04",
+        "end_date": null,
+        "precision": "year"
+      },
+      "end_date": null,
+      "locations": [
+        {
+          "geography_id": "geo_rome",
+          "name": "Rome",
+          "latitude": null,
+          "longitude": null
+        }
+      ],
+      "related_people": [
+        {
+          "person_id": "person_caesar",
+          "name": "Julius Caesar",
+          "role": "Ancient Precursor"
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "curated_internal",
+          "source_name": "Curated Internal",
+          "trust_level": 0.9,
+          "fields_contributed": [
+            "title",
+            "dates"
+          ],
+          "external_id": null,
+          "url": null,
+          "last_verified": "2026-01-08 14:39:33.514592"
+        }
+      ],
+      "source_of_truth": null,
+      "confidence": 0.7,
+      "conflict_notes": null
+    },
+    {
+      "id": "event_american_cw",
+      "created_at": "2026-01-08 14:39:33.514600",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514601",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "title": "American Civil War",
+      "description": "Civil war in the United States (1861–1865)",
+      "start_date": {
+        "start_date": "1861-04-12",
+        "end_date": "1865-05-09",
+        "precision": "day"
+      },
+      "end_date": null,
+      "locations": [],
+      "related_people": [
+        {
+          "person_id": "person_lincoln",
+          "name": "Abraham Lincoln",
+          "role": "President"
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "wikipedia",
+          "source_name": "Wikipedia",
+          "trust_level": 0.7,
+          "fields_contributed": [
+            "dates",
+            "overview"
+          ],
+          "external_id": null,
+          "url": null,
+          "last_verified": "2026-01-08 14:39:33.514599"
+        }
+      ],
+      "source_of_truth": null,
+      "confidence": 0.9,
+      "conflict_notes": null
+    },
+    {
+      "id": "event_cleopatra",
+      "created_at": "2026-01-08 14:39:33.514607",
+      "created_by": "sample_user",
+      "last_modified_at": "2026-01-08 14:39:33.514608",
+      "last_modified_by": "sample_user",
+      "metadata": {},
+      "title": "Reign of Cleopatra VII",
+      "description": "Period during which Cleopatra VII ruled Egypt",
+      "start_date": {
+        "start_date": "-51-01-01",
+        "end_date": "-30-08-12",
+        "precision": "year"
+      },
+      "end_date": null,
+      "locations": [
+        {
+          "geography_id": "geo_rome",
+          "name": "Rome",
+          "latitude": null,
+          "longitude": null
+        }
+      ],
+      "related_people": [
+        {
+          "person_id": "person_cleopatra",
+          "name": "Cleopatra VII",
+          "role": "Ruler"
+        }
+      ],
+      "sources": [
+        {
+          "source_id": "user_submission",
+          "source_name": "User Submission",
+          "trust_level": 0.5,
+          "fields_contributed": [
+            "dates",
+            "biography"
+          ],
+          "external_id": null,
+          "url": null,
+          "last_verified": "2026-01-08 14:39:33.514606"
+        }
+      ],
+      "source_of_truth": null,
+      "confidence": 0.6,
+      "conflict_notes": null
+    }
+  ],
+  "people": [
+    {
+      "id": "person_napoleon",
+      "created_at": "2026-01-08 14:39:33.514500",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514501",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Napoleon Bonaparte",
+      "birth_date": "1769-08-15",
+      "death_date": "1821-05-05",
+      "birth_location": "Ajaccio, Corsica",
+      "death_location": null,
+      "description": "French military leader and emperor",
+      "occupations": [
+        "military leader",
+        "emperor"
+      ],
+      "nationalities": [
+        "French"
+      ],
+      "related_people": [],
+      "organizations": [],
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "person_churchill",
+      "created_at": "2026-01-08 14:39:33.514508",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514508",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Winston Churchill",
+      "birth_date": "1874-11-30",
+      "death_date": "1965-01-24",
+      "birth_location": null,
+      "death_location": null,
+      "description": "British Prime Minister during WWII",
+      "occupations": [
+        "politician",
+        "writer"
+      ],
+      "nationalities": [
+        "British"
+      ],
+      "related_people": [],
+      "organizations": [],
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "person_joan",
+      "created_at": "2026-01-08 14:39:33.514515",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514516",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Joan of Arc",
+      "birth_date": "1412-01-06",
+      "death_date": "1431-05-30",
+      "birth_location": null,
+      "death_location": null,
+      "description": "French heroine and military leader",
+      "occupations": [
+        "military leader"
+      ],
+      "nationalities": [
+        "French"
+      ],
+      "related_people": [],
+      "organizations": [],
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "person_caesar",
+      "created_at": "2026-01-08 14:39:33.514519",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514519",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Julius Caesar",
+      "birth_date": "100-07-13",
+      "death_date": "44-03-15",
+      "birth_location": null,
+      "death_location": null,
+      "description": "Roman general and statesman",
+      "occupations": [
+        "general",
+        "politician"
+      ],
+      "nationalities": [
+        "Roman"
+      ],
+      "related_people": [],
+      "organizations": [],
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "person_lincoln",
+      "created_at": "2026-01-08 14:39:33.514521",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514522",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Abraham Lincoln",
+      "birth_date": "1809-02-12",
+      "death_date": "1865-04-15",
+      "birth_location": null,
+      "death_location": null,
+      "description": "16th President of the United States",
+      "occupations": [
+        "politician"
+      ],
+      "nationalities": [
+        "American"
+      ],
+      "related_people": [],
+      "organizations": [],
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "person_cleopatra",
+      "created_at": "2026-01-08 14:39:33.514524",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514525",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Cleopatra VII",
+      "birth_date": "69-01-01",
+      "death_date": "30-08-12",
+      "birth_location": null,
+      "death_location": null,
+      "description": "Last active ruler of the Ptolemaic Kingdom of Egypt",
+      "occupations": [
+        "ruler"
+      ],
+      "nationalities": [
+        "Egyptian"
+      ],
+      "related_people": [],
+      "organizations": [],
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "person_hitler",
+      "created_at": "2026-01-08 14:39:33.514527",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514528",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Adolf Hitler",
+      "birth_date": "1889-04-20",
+      "death_date": "1945-04-30",
+      "birth_location": null,
+      "death_location": null,
+      "description": "Leader of Nazi Germany",
+      "occupations": [
+        "politician"
+      ],
+      "nationalities": [
+        "Austrian",
+        "German"
+      ],
+      "related_people": [],
+      "organizations": [],
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    }
+  ],
+  "geographies": [
+    {
+      "id": "geo_europe",
+      "created_at": "2026-01-08 14:39:33.514461",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514462",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Europe",
+      "geography_type": "continent",
+      "alternate_names": [],
+      "description": "Continent of Europe",
+      "center_coordinate": {
+        "latitude": 54.526,
+        "longitude": 15.2551,
+        "elevation": null
+      },
+      "boundaries": null,
+      "parent_geography_id": null,
+      "child_geographies": [],
+      "temporal_variants": [],
+      "climate": null,
+      "geology": null,
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "geo_france",
+      "created_at": "2026-01-08 14:39:33.514472",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514472",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "France",
+      "geography_type": "country",
+      "alternate_names": [],
+      "description": "France",
+      "center_coordinate": {
+        "latitude": 46.2276,
+        "longitude": 2.2137,
+        "elevation": null
+      },
+      "boundaries": null,
+      "parent_geography_id": "geo_europe",
+      "child_geographies": [],
+      "temporal_variants": [],
+      "climate": null,
+      "geology": null,
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "geo_paris",
+      "created_at": "2026-01-08 14:39:33.514477",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514477",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Paris",
+      "geography_type": "city",
+      "alternate_names": [],
+      "description": "Capital of France",
+      "center_coordinate": {
+        "latitude": 48.8566,
+        "longitude": 2.3522,
+        "elevation": null
+      },
+      "boundaries": null,
+      "parent_geography_id": "geo_france",
+      "child_geographies": [],
+      "temporal_variants": [],
+      "climate": null,
+      "geology": null,
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "geo_normandy",
+      "created_at": "2026-01-08 14:39:33.514481",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514481",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Normandy",
+      "geography_type": "region",
+      "alternate_names": [],
+      "description": "Region in northern France",
+      "center_coordinate": {
+        "latitude": 49.1829,
+        "longitude": -0.3707,
+        "elevation": null
+      },
+      "boundaries": null,
+      "parent_geography_id": "geo_france",
+      "child_geographies": [],
+      "temporal_variants": [],
+      "climate": null,
+      "geology": null,
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "geo_uk",
+      "created_at": "2026-01-08 14:39:33.514484",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514485",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "United Kingdom",
+      "geography_type": "country",
+      "alternate_names": [],
+      "description": "United Kingdom",
+      "center_coordinate": {
+        "latitude": 55.3781,
+        "longitude": -3.436,
+        "elevation": null
+      },
+      "boundaries": null,
+      "parent_geography_id": "geo_europe",
+      "child_geographies": [],
+      "temporal_variants": [],
+      "climate": null,
+      "geology": null,
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "geo_waterloo",
+      "created_at": "2026-01-08 14:39:33.514492",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514492",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Waterloo",
+      "geography_type": "village",
+      "alternate_names": [],
+      "description": "Site of the Battle of Waterloo (modern Belgium)",
+      "center_coordinate": {
+        "latitude": 50.6806,
+        "longitude": 4.4128,
+        "elevation": null
+      },
+      "boundaries": null,
+      "parent_geography_id": "geo_europe",
+      "child_geographies": [],
+      "temporal_variants": [],
+      "climate": null,
+      "geology": null,
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    },
+    {
+      "id": "geo_rome",
+      "created_at": "2026-01-08 14:39:33.514495",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514495",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Rome",
+      "geography_type": "city",
+      "alternate_names": [],
+      "description": "Ancient and modern capital of Italy",
+      "center_coordinate": {
+        "latitude": 41.9028,
+        "longitude": 12.4964,
+        "elevation": null
+      },
+      "boundaries": null,
+      "parent_geography_id": "geo_europe",
+      "child_geographies": [],
+      "temporal_variants": [],
+      "climate": null,
+      "geology": null,
+      "sources": [],
+      "source_of_truth": null,
+      "confidence": 0.5,
+      "conflict_notes": null
+    }
+  ],
+  "data_sources": [
+    {
+      "id": "wikipedia",
+      "name": "Wikipedia",
+      "source_type": "scraped",
+      "trust_level": 0.7,
+      "description": "Public encyclopedia entries",
+      "last_updated": "2026-01-08 14:39:33.514145",
+      "refresh_frequency": null,
+      "base_url": null
+    },
+    {
+      "id": "curated_internal",
+      "name": "Curated Internal",
+      "source_type": "curated",
+      "trust_level": 0.95,
+      "description": "Provenance-controlled internal dataset",
+      "last_updated": "2026-01-08 14:39:33.514442",
+      "refresh_frequency": null,
+      "base_url": null
+    },
+    {
+      "id": "user_submission",
+      "name": "User Submission",
+      "source_type": "user_generated",
+      "trust_level": 0.5,
+      "description": "Contributions from power users pending review",
+      "last_updated": "2026-01-08 14:39:33.514446",
+      "refresh_frequency": null,
+      "base_url": null
+    }
+  ],
+  "dimensions": [
+    {
+      "id": "dim_timeline",
+      "created_at": "2026-01-08 14:39:33.514615",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514615",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Timeline",
+      "dimension_type": "timeline",
+      "description": "Navigate historical events by time",
+      "icon": null,
+      "color": null,
+      "fields": [
+        {
+          "name": "start_date",
+          "display_name": "Start Date",
+          "field_type": "date",
+          "filterable": true,
+          "sortable": true,
+          "metadata": null
+        }
+      ],
+      "pivot_to_dimensions": [],
+      "supports_zoom": true,
+      "zoom_levels": null,
+      "is_custom": false,
+      "configuration": null
+    },
+    {
+      "id": "dim_geography",
+      "created_at": "2026-01-08 14:39:33.514621",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514622",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "Geography",
+      "dimension_type": "geography",
+      "description": "Navigate entities by geographic location",
+      "icon": null,
+      "color": null,
+      "fields": [
+        {
+          "name": "location",
+          "display_name": "Location",
+          "field_type": "geography",
+          "filterable": true,
+          "sortable": true,
+          "metadata": null
+        }
+      ],
+      "pivot_to_dimensions": [],
+      "supports_zoom": true,
+      "zoom_levels": null,
+      "is_custom": false,
+      "configuration": null
+    },
+    {
+      "id": "dim_people",
+      "created_at": "2026-01-08 14:39:33.514640",
+      "created_by": "sample_data",
+      "last_modified_at": "2026-01-08 14:39:33.514641",
+      "last_modified_by": "sample_data",
+      "metadata": {},
+      "name": "People",
+      "dimension_type": "people",
+      "description": "Navigate historical figures",
+      "icon": null,
+      "color": null,
+      "fields": [
+        {
+          "name": "name",
+          "display_name": "Name",
+          "field_type": "string",
+          "filterable": true,
+          "sortable": true,
+          "metadata": null
+        }
+      ],
+      "pivot_to_dimensions": [],
+      "supports_zoom": true,
+      "zoom_levels": null,
+      "is_custom": false,
+      "configuration": null
+    }
+  ]
+}

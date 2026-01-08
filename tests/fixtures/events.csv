@@ -1,0 +1,8 @@
+id,title,start_date,end_date,confidence,created_by
+event_french_revolution,French Revolution,1789-05-05,,0.85,sample_data
+event_waterloo,Battle of Waterloo,1815-06-18,,0.9,sample_data
+event_wwii,World War II,1939-09-01,,0.95,sample_data
+event_hastings,Battle of Hastings,1066-10-14,,0.8,sample_data
+event_fall_rome,Fall of the Western Roman Empire,0476-09-04,,0.7,sample_data
+event_american_cw,American Civil War,1861-04-12,,0.9,sample_data
+event_cleopatra,Reign of Cleopatra VII,-51-01-01,,0.6,sample_user

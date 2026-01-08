@@ -1,0 +1,8 @@
+id,name,type,latitude,longitude,created_by
+geo_europe,Europe,continent,54.526,15.2551,sample_data
+geo_france,France,country,46.2276,2.2137,sample_data
+geo_paris,Paris,city,48.8566,2.3522,sample_data
+geo_normandy,Normandy,region,49.1829,-0.3707,sample_data
+geo_uk,United Kingdom,country,55.3781,-3.436,sample_data
+geo_waterloo,Waterloo,village,50.6806,4.4128,sample_data
+geo_rome,Rome,city,41.9028,12.4964,sample_data
