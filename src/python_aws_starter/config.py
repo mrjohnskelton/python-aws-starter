@@ -101,6 +101,10 @@ class ApplicationConfig:
         debug: bool = False,
         database: Optional[DatabaseConfig] = None,
         cache: Optional[CacheConfig] = None,
+        wikidata_log_body: bool = False,
+        data_log_body_max: int = 1000,
+        data_source: str = "local",
+        log_level: str = "INFO",
     ):
         self.environment = environment
         self.debug = debug
@@ -114,7 +118,7 @@ class ApplicationConfig:
         self.cache = cache or CacheConfig()
         self.dimensions = DimensionConfig()
         # Data source configuration: 'local' or 'wikidata'
-        self.data_source = "local"
+        self.data_source = data_source
         # Wikidata specific options
         self.wikidata_api = {
             "base_url": "https://www.wikidata.org/w/api.php",
@@ -122,10 +126,10 @@ class ApplicationConfig:
             "limit": 10,
         }
         # Logging configuration
-        self.log_level = "INFO"
+        self.log_level = log_level
         # Wikidata response body logging
-        self.wikidata_log_body = False
-        self.wikidata_log_body_max = 1000
+        self.wikidata_log_body = wikidata_log_body
+        self.data_log_body_max = data_log_body_max
 
     @classmethod
     def from_env(cls) -> "ApplicationConfig":
@@ -164,16 +168,21 @@ class ApplicationConfig:
         
         # wikidata body logging settings
         wikidata_log_body = os.getenv("WIKIDATA_LOG_BODY", "false").lower() == "true"
-        wikidata_log_body_max = int(os.getenv("WIKIDATA_LOG_BODY_MAX", "1000"))
+        data_log_body_max = int(os.getenv("DATA_LOG_BODY_MAX", "1000"))
 
-        inst = cls(environment=env, debug=debug, database=db, cache=cache)
-        inst.data_source = data_source
+        inst = cls(
+            environment=env,
+            debug=debug,
+            database=db,
+            cache=cache,
+            wikidata_log_body=wikidata_log_body,
+            data_log_body_max=data_log_body_max,
+            data_source=data_source,
+            log_level=log_level,
+        )
         inst.wikidata_api["limit"] = wikidata_limit
         inst.wikidata_api["base_url"] = wikidata_base
         inst.wikidata_api["entity_url"] = wikidata_entity
-        inst.log_level = log_level
-        inst.wikidata_log_body = wikidata_log_body
-        inst.wikidata_log_body_max = wikidata_log_body_max
         return inst
 
 
