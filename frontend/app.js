@@ -3,6 +3,8 @@ const API_BASE = window.API_BASE || 'http://localhost:8000';
 const $ = sel => document.querySelector(sel);
 const listEl = $('#list');
 const summaryEl = $('#summary');
+const detailPanel = $('#detailPanel');
+const detailContent = $('#detailContent');
 let zoom = 2;
 let lastResults = [];
 let selectedItem = null;
@@ -96,11 +98,15 @@ function cardInner(item, dim){
 
 function escapeHTML(s){ return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }
 
-function selectItem(idx, el){
+async function selectItem(idx, el){
   const prev = document.querySelector('.card.selected');
   if(prev) prev.classList.remove('selected');
   el.classList.add('selected');
   selectedItem = lastResults[idx];
+  
+  // Fetch and display full entity details
+  await loadEntityDetails(selectedItem);
+  
   // center map on selected item's first location if available
   if(map && selectedItem && selectedItem.locations && selectedItem.locations.length){
     const loc = selectedItem.locations[0];
@@ -109,6 +115,206 @@ function selectItem(idx, el){
     const lon = loc.longitude || (geo && geo.center_coordinate && geo.center_coordinate.longitude);
     if(lat && lon) map.setView([lat, lon], Math.max(3,map.getZoom()));
   }
+}
+
+async function loadEntityDetails(item) {
+  if (!item || !detailPanel || !detailContent) {
+    console.warn('[loadEntityDetails] Missing item or DOM elements');
+    return;
+  }
+  
+  // Extract QID from item ID
+  let qid = null;
+  if (item.id) {
+    // Handle formats like "Q123", "person_wikidata_Q123", "event_wikidata_Q456"
+    if (item.id.startsWith('Q') && /^Q\d+$/.test(item.id)) {
+      qid = item.id;
+    } else if (item.id.includes('_')) {
+      const parts = item.id.split('_');
+      const lastPart = parts[parts.length - 1];
+      if (lastPart.startsWith('Q') && /^Q\d+$/.test(lastPart)) {
+        qid = lastPart;
+      }
+    }
+  }
+  
+  // If we have a QID, fetch full entity details
+  if (qid) {
+    try {
+      console.log(`[loadEntityDetails] Fetching full entity details for QID: ${qid}`);
+      const url = `${API_BASE}/wikidata/entity/${qid}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const fullEntity = await res.json();
+        console.log(`[loadEntityDetails] Received full entity data:`, fullEntity);
+        renderDetailPanel(fullEntity);
+        return;
+      } else {
+        console.warn(`[loadEntityDetails] Failed to fetch entity ${qid}: ${res.status}`);
+      }
+    } catch (err) {
+      console.error(`[loadEntityDetails] Error fetching entity ${qid}:`, err);
+    }
+  }
+  
+  // Fallback: display available data from the item itself
+  console.log(`[loadEntityDetails] Using item data directly (no QID or fetch failed)`);
+  renderDetailPanel(item);
+}
+
+function renderDetailPanel(entity) {
+  if (!detailPanel || !detailContent) {
+    console.warn('[renderDetailPanel] Detail panel elements not found');
+    return;
+  }
+  
+  // Show the detail panel
+  detailPanel.style.display = 'block';
+  
+  // Get display name
+  const displayName = getLabel(entity) || entity.name || entity.title || entity.id || 'Unknown';
+  const displayDesc = getDescription(entity) || entity.description || '';
+  
+  let html = `<div class="detail-header">`;
+  html += `<h4>${escapeHTML(displayName)}</h4>`;
+  if (displayDesc) {
+    html += `<p class="detail-description">${escapeHTML(displayDesc)}</p>`;
+  }
+  html += `</div>`;
+  
+  // Display QID if available
+  let qid = entity.id;
+  if (qid && qid.includes('_')) {
+    const parts = qid.split('_');
+    qid = parts[parts.length - 1];
+  }
+  if (qid && qid.startsWith('Q')) {
+    html += `<div class="detail-section">`;
+    html += `<strong>Wikidata ID:</strong> <a href="https://www.wikidata.org/wiki/${qid}" target="_blank" rel="noopener">${qid}</a>`;
+    html += `</div>`;
+  }
+  
+  // Display labels in multiple languages if available
+  if (entity.labels && Object.keys(entity.labels).length > 0) {
+    html += `<div class="detail-section">`;
+    html += `<strong>Labels:</strong>`;
+    html += `<ul class="detail-list">`;
+    for (const [lang, labelData] of Object.entries(entity.labels)) {
+      const labelValue = labelData.value || labelData;
+      html += `<li><span class="lang-code">${lang}</span>: ${escapeHTML(labelValue)}</li>`;
+    }
+    html += `</ul>`;
+    html += `</div>`;
+  }
+  
+  // Display descriptions in multiple languages if available
+  if (entity.descriptions && Object.keys(entity.descriptions).length > 0) {
+    html += `<div class="detail-section">`;
+    html += `<strong>Descriptions:</strong>`;
+    html += `<ul class="detail-list">`;
+    for (const [lang, descData] of Object.entries(entity.descriptions)) {
+      const descValue = descData.value || descData;
+      html += `<li><span class="lang-code">${lang}</span>: ${escapeHTML(descValue)}</li>`;
+    }
+    html += `</ul>`;
+    html += `</div>`;
+  }
+  
+  // Display aliases if available
+  if (entity.aliases && Object.keys(entity.aliases).length > 0) {
+    html += `<div class="detail-section">`;
+    html += `<strong>Aliases:</strong>`;
+    for (const [lang, aliasList] of Object.entries(entity.aliases)) {
+      if (Array.isArray(aliasList) && aliasList.length > 0) {
+        html += `<div><span class="lang-code">${lang}</span>: `;
+        const aliasValues = aliasList.map(a => a.value || a).join(', ');
+        html += `${escapeHTML(aliasValues)}</div>`;
+      }
+    }
+    html += `</div>`;
+  }
+  
+  // Display claims (key properties)
+  if (entity.claims && Object.keys(entity.claims).length > 0) {
+    html += `<div class="detail-section">`;
+    html += `<strong>Properties:</strong>`;
+    html += `<ul class="detail-list">`;
+    
+    // Show first 10 claims
+    const claimEntries = Object.entries(entity.claims).slice(0, 10);
+    for (const [propId, claims] of claimEntries) {
+      if (Array.isArray(claims) && claims.length > 0) {
+        const claim = claims[0];
+        const mainsnak = claim.mainsnak || {};
+        const datavalue = mainsnak.datavalue || {};
+        const value = datavalue.value || {};
+        
+        let valueDisplay = '';
+        if (datavalue.type === 'time' && value.time) {
+          valueDisplay = value.time.replace(/^\+/, '').split('T')[0];
+        } else if (datavalue.type === 'wikibase-entityid' && value.id) {
+          valueDisplay = value.id;
+        } else if (datavalue.type === 'globecoordinate') {
+          valueDisplay = `${value.latitude?.toFixed(4)}, ${value.longitude?.toFixed(4)}`;
+        } else if (typeof value === 'string') {
+          valueDisplay = value;
+        } else {
+          valueDisplay = JSON.stringify(value).substring(0, 50);
+        }
+        
+        html += `<li><strong>${propId}</strong>: ${escapeHTML(String(valueDisplay))}</li>`;
+      }
+    }
+    html += `</ul>`;
+    html += `</div>`;
+  }
+  
+  // Display sitelinks (Wikipedia links) if available
+  if (entity.sitelinks && Object.keys(entity.sitelinks).length > 0) {
+    html += `<div class="detail-section">`;
+    html += `<strong>Wikipedia Links:</strong>`;
+    html += `<ul class="detail-list">`;
+    for (const [site, sitelink] of Object.entries(entity.sitelinks)) {
+      const title = sitelink.title || '';
+      const url = sitelink.url || `https://${site}.wikipedia.org/wiki/${encodeURIComponent(title)}`;
+      html += `<li><a href="${url}" target="_blank" rel="noopener">${site}: ${escapeHTML(title)}</a></li>`;
+    }
+    html += `</ul>`;
+    html += `</div>`;
+  }
+  
+  // Display other relevant fields
+  const otherFields = ['birth_date', 'death_date', 'start_date', 'end_date', 'occupations', 'nationalities', 'geography_type'];
+  for (const field of otherFields) {
+    if (entity[field] !== undefined && entity[field] !== null) {
+      html += `<div class="detail-section">`;
+      html += `<strong>${field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong> `;
+      if (Array.isArray(entity[field])) {
+        html += entity[field].join(', ');
+      } else if (typeof entity[field] === 'object') {
+        html += JSON.stringify(entity[field]);
+      } else {
+        html += escapeHTML(String(entity[field]));
+      }
+      html += `</div>`;
+    }
+  }
+  
+  detailContent.innerHTML = html;
+}
+
+function getLabel(item, lang = 'en') {
+  if (item.labels && item.labels[lang]) {
+    return item.labels[lang].value || item.labels[lang];
+  }
+  return item.name || item.title || null;
+}
+
+function getDescription(item, lang = 'en') {
+  if (item.descriptions && item.descriptions[lang]) {
+    return item.descriptions[lang].value || item.descriptions[lang];
+  }
+  return item.description || null;
 }
 
 async function search(dim, q){
@@ -275,6 +481,8 @@ $('#searchForm').addEventListener('submit', e=>{
 
 $('#clearBtn').addEventListener('click', ()=>{
   $('#q').value=''; 
+  selectedItem = null;
+  if (detailPanel) detailPanel.style.display = 'none';
   renderResults([], $('#dimension').value);
   updateVisualizations([], $('#dimension').value);
 });

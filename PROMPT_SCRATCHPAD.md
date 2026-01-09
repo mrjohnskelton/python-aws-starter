@@ -2,25 +2,49 @@
 
 ## Next Steps
 
-Mid-way through...
-also change the code so check that WIKIDATA_LOG_BODY, DATA_LOG_BODY_MAX, DATA_SOURCE and LOG_LEVEL are defined in the main config.py file
+### Functional Features
 
-based on our chat, what should the default values for the following be:WIKIDATA_LOG_BODY, DATA_LOG_BODY_MAX, DATA_SOURCE and LOG_LEVEL
-
-The default values should be:
-WIKIDATA_LOG_BODY: False — don't log full bodies by default.
-DATA_LOG_BODY_MAX: 1000 — limit body logs to ~1KB (use 4096 if you prefer 4KB).
-DATA_SOURCE: "local" — default to local/fixture data.
-LOG_LEVEL: "INFO" — use INFO by default (DEBUG when DEBUG=true).
+Add a 'detail panel' to the front end, this should go below the list/cards section.  There should be a single detail panel which shows the details returned from wikidata for the selected card.
+If you need to make any back-end changes to support this then do so (for example if detail fields have not been passed through yet).
+Update the functional requirements markdown to reflect this feature.
+Deploy the new features.
 
 
-Next steps (optional): add caching, rate-limiting, richer claim-to-field mapping, and pivot support — want me to implement any of these?
+Change the initial random result to only return a 'person' type result. I think this can be done by filtering by instance of a class (e.g., Q5 for human)
+Update the functional requirements markdown to reflect this feature.
+
+Get the timeline and map working better
+
+### Non-Functional Features
+
+
+Add caching so that if the user goes 'back' we don't have to requery Wikidata.  
+Update the non-functional requirements markdown to reflect this feature.
+
+
+Include rate limiting capability to stop the user performing more than one wikidata search every 5 seconds.
+Update the non-functional requirements markdown to reflect this feature.
+
+Add a 'detail panel' to the front end, this should go below the list/cards section.  There should be a single detail panel which shows the details returned from wikidata for the selected card.
+Update the functional requirements markdown to reflect this feature.
+
+
+### Housekeeping
+
+Review the local test data interfaces and data to check that it supports all the front-end features that are now avialbale and it compatible with the 'live' seaerch of wikidata.
+
+
+
+
+
+
 
 ## To Run Prompt
 
 docker-compose up --build &
 (cd frontend && python3 -m http.server 8080) &
 
+
+
 ## Total Scratchpad
 
-what is the difference between the following commands: "git config pull.rebase false", "git config pull.rebase true" and "git config pull.ff only"

@@ -38,6 +38,7 @@ The **Timeline Application** is a highly-interactive visual interface for explor
 3. **Multi-Source Integration**: Combine data from curated sources, public data, and user submissions
 4. **User Contributions**: Enable power users to submit corrections and new data with a review workflow
 5. **Random Entity Discovery**: Frontend automatically loads a random Wikidata entity on initial page load to provide immediate engagement
+6. **Entity Detail Panel**: Comprehensive detail view showing full Wikidata entity information (labels, descriptions, claims, Wikipedia links) when a card is selected
 
 ## Development Standards
 

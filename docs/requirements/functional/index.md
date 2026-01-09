@@ -12,6 +12,7 @@ The solution creates a highly-interactive visual timeline of historical and geog
 2. **[Zoom Functionality](./zoom-functionality.md)** - Navigate data hierarchies within each dimension
 3. **[Data Sourcing](./data-sourcing.md)** - Integrate data from multiple sources (curated, user-generated, scraped)
 4. **[User Contributions](./user-contributions.md)** - Enable power users to submit and manage data
+5. **Entity Detail Panel** - Display comprehensive Wikidata entity details when a card is selected, including labels, descriptions, aliases, claims, and Wikipedia links
 
 ## Key Features
 
@@ -28,6 +29,17 @@ Users can navigate at different levels of detail:
 - **Geography**: From villages to planetary scale
 - **People**: From individuals to entire civilizations
 - **Events**: From individual events to eras
+
+### Entity Detail Panel
+When a user selects a card from the search results, a detail panel appears below the list showing:
+- **Full Entity Information**: Complete Wikidata entity data fetched via `/wikidata/entity/{qid}` endpoint
+- **Multi-language Support**: Labels, descriptions, and aliases in all available languages
+- **Property Claims**: Key Wikidata properties (P-codes) with their values (dates, coordinates, entity references, etc.)
+- **Wikipedia Links**: Direct links to Wikipedia articles in all available languages
+- **Structured Display**: Organized sections for easy reading and navigation
+- **External Links**: Clickable links to Wikidata and Wikipedia pages
+
+The detail panel automatically fetches full entity data when a Wikidata entity (QID) is detected, providing rich context beyond the lightweight search results.
 
 ## Related Documentation
 
