@@ -12,6 +12,14 @@ from .wikidata_meta import (
     WikibaseEntityId,
     GlobeCoordinate,
 )
+from .property_synonyms import (
+    START_DATE_PROPERTY_IDS,
+    END_DATE_PROPERTY_IDS,
+    get_start_date_properties,
+    get_end_date_properties,
+    is_start_date_property,
+    is_end_date_property,
+)
 
 
 # Common Wikidata property IDs

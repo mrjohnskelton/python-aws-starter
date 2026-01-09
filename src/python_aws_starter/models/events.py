@@ -75,37 +75,30 @@ class Event(BaseEntity):
         return desc if desc else self.description
     
     def get_computed_start_date(self) -> DateRange:
-        """Get start date from claims (P580, P585, or P571) if available."""
-        # Try P580 (start time) first
-        claim = self.get_best_claim(Property.START_TIME)
-        if claim:
-            date_str = extract_time_from_claim(claim)
-            if date_str:
-                return DateRange(start_date=date_str, precision="day" if len(date_str) >= 10 else "year")
+        """Get start date from claims using property synonyms configuration."""
+        from python_aws_starter.models.property_synonyms import get_start_date_properties
         
-        # Try P585 (point in time)
-        claim = self.get_best_claim(Property.POINT_IN_TIME)
-        if claim:
-            date_str = extract_time_from_claim(claim)
-            if date_str:
-                return DateRange(start_date=date_str, precision="day" if len(date_str) >= 10 else "year")
-        
-        # Try P571 (inception)
-        claim = self.get_best_claim(Property.INCEPTION)
-        if claim:
-            date_str = extract_time_from_claim(claim)
-            if date_str:
-                return DateRange(start_date=date_str, precision="day" if len(date_str) >= 10 else "year")
+        # Try all start date synonyms in priority order
+        for prop_id in get_start_date_properties():
+            claim = self.get_best_claim(prop_id)
+            if claim:
+                date_str = extract_time_from_claim(claim)
+                if date_str:
+                    return DateRange(start_date=date_str, precision="day" if len(date_str) >= 10 else "year")
         
         return self.start_date
     
     def get_computed_end_date(self) -> Optional[DateRange]:
-        """Get end date from claims (P582) if available."""
-        claim = self.get_best_claim(Property.END_TIME)
-        if claim:
-            date_str = extract_time_from_claim(claim)
-            if date_str:
-                return DateRange(start_date=date_str, end_date=date_str, precision="day" if len(date_str) >= 10 else "year")
+        """Get end date from claims using property synonyms configuration."""
+        from python_aws_starter.models.property_synonyms import get_end_date_properties
+        
+        # Try all end date synonyms in priority order
+        for prop_id in get_end_date_properties():
+            claim = self.get_best_claim(prop_id)
+            if claim:
+                date_str = extract_time_from_claim(claim)
+                if date_str:
+                    return DateRange(start_date=date_str, end_date=date_str, precision="day" if len(date_str) >= 10 else "year")
         return self.end_date
     
     def get_locations_from_claims(self) -> List[GeographicReference]:

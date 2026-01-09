@@ -51,7 +51,7 @@ The detail panel automatically fetches full entity data when a Wikidata entity (
 When a user selects a different card, both the timeline and map visualizations automatically update to reflect the selected card's content:
 
 - **Timeline Updates**: 
-  - Extracts start/end dates from Wikidata claims (P569, P570, P580, P582, etc.) or traditional fields
+  - Extracts start/end dates from Wikidata claims using property synonyms or traditional fields
   - Highlights the selected card's date range on the timeline with enhanced visual styling
   - Updates immediately when selection changes
 
@@ -62,6 +62,20 @@ When a user selects a different card, both the timeline and map visualizations a
   - Updates immediately when selection changes
 
 - **Real-time Synchronization**: Both visualizations update simultaneously when a card is selected, providing immediate visual feedback and context about the selected entity's temporal and geographic position.
+
+### Date Property Synonyms
+The system recognizes multiple Wikidata properties as synonyms for start and end dates, enabling comprehensive timeline operations across different entity types:
+
+- **Configuration-Based**: Date property synonyms are defined in a centralized configuration file (`property_synonyms.py`), making it easy to add or modify recognized date properties
+- **Start Date Synonyms**: The system recognizes multiple properties as start dates:
+  - P571 (Inception), P1619 (Date of official opening), P569 (Birth date), P580 (Start time), P585 (Point in time), P1319 (Earliest date), P2031 (Work period start), P1249 (Time of earliest written record)
+- **End Date Synonyms**: The system recognizes multiple properties as end dates:
+  - P570 (Death date), P582 (End time), P576 (Dissolved), P2669 (Terminated), P1326 (Latest date), P2032 (Work period end)
+- **Flexible Timeline Operations**: This synonym system enables:
+  - Overlaying shared timelines across different entity types (people, events, organizations, etc.)
+  - Jumping from one item to another based on overlapping or adjoining timeframes
+  - Consistent date extraction regardless of entity type (e.g., Jurassic Age start/end dates work the same as person birth/death dates)
+- **Extensibility**: The configuration file can be extended with additional property synonyms for other use cases in the future
 
 ## Related Documentation
 

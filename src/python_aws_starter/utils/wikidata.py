@@ -820,31 +820,27 @@ def wikidata_to_event(entity: Dict[str, Any], qid: str, search_hit: Optional[Dic
         
         claims = entity.get("claims", {})
         
-        # Extract dates
+        # Extract dates using property synonyms configuration
+        from python_aws_starter.models.property_synonyms import get_start_date_properties, get_end_date_properties
+        
         start_date = None
         end_date = None
         
-        # Try P580 (start time)
-        start_val = _get_claim_value(claims, "P580")
-        if start_val:
-            start_date = _parse_wikidata_date(start_val)
+        # Try all start date synonyms in priority order
+        for prop_id in get_start_date_properties():
+            start_val = _get_claim_value(claims, prop_id)
+            if start_val:
+                start_date = _parse_wikidata_date(start_val)
+                if start_date:
+                    break  # Use first found start date
         
-        # Try P585 (point in time) if no start time
-        if not start_date:
-            point_val = _get_claim_value(claims, "P585")
-            if point_val:
-                start_date = _parse_wikidata_date(point_val)
-        
-        # Try P571 (inception) if still no start time
-        if not start_date:
-            inception_val = _get_claim_value(claims, "P571")
-            if inception_val:
-                start_date = _parse_wikidata_date(inception_val)
-        
-        # End time
-        end_val = _get_claim_value(claims, "P582")
-        if end_val:
-            end_date = _parse_wikidata_date(end_val)
+        # Try all end date synonyms in priority order
+        for prop_id in get_end_date_properties():
+            end_val = _get_claim_value(claims, prop_id)
+            if end_val:
+                end_date = _parse_wikidata_date(end_val)
+                if end_date:
+                    break  # Use first found end date
         
         # Create date range
         date_range = DateRange(

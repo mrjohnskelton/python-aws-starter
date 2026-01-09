@@ -320,11 +320,35 @@ function getDescription(item, lang = 'en') {
 }
 
 /**
- * Extract start and end dates from entity claims.
- * Handles different property IDs for different entity types:
- * - People: P569 (birth date), P570 (death date)
- * - Events: P580 (start time), P582 (end time), P585 (point in time), P571 (inception)
- * - Other entities: Tries to find any date-related claims
+ * Date property synonyms configuration.
+ * These property IDs are treated as synonyms for start/end dates.
+ * Definitions: https://www.wikidata.org/wiki/Property:{Pnumber}
+ */
+const DATE_PROPERTY_SYNONYMS = {
+  // Start date synonyms
+  startDate: [
+    'P571',  // Inception
+    'P1619', // Date of official opening
+    'P569',  // Birth date
+    'P580',  // Start time (event)
+    'P585',  // Point in time
+    'P1319', // Earliest date
+    'P2031', // Work period (start)
+  ],
+  // End date synonyms
+  endDate: [
+    'P570',  // Death date
+    'P582',  // End time
+    'P576',  // Dissolved
+    'P2669', // Terminated
+    'P1326', // Latest date
+    'P2032', // Work period (end)
+  ]
+};
+
+/**
+ * Extract start and end dates from entity claims using property synonyms.
+ * Handles multiple Wikidata properties that represent start/end dates.
  */
 function extractDatesFromClaims(entity) {
   let startDate = null;
@@ -346,32 +370,26 @@ function extractDatesFromClaims(entity) {
     return timeStr;
   };
   
-  // For people: P569 (birth date), P570 (death date)
-  if (entity.claims.P569 && entity.claims.P569.length > 0) {
-    startDate = extractDateFromClaim(entity.claims.P569[0]);
-  }
-  if (entity.claims.P570 && entity.claims.P570.length > 0) {
-    endDate = extractDateFromClaim(entity.claims.P570[0]);
-  }
-  
-  // For events: P580 (start time), P582 (end time), P585 (point in time), P571 (inception)
-  if (!startDate) {
-    // Try P580 (start time)
-    if (entity.claims.P580 && entity.claims.P580.length > 0) {
-      startDate = extractDateFromClaim(entity.claims.P580[0]);
-    }
-    // Try P585 (point in time) if no start time
-    if (!startDate && entity.claims.P585 && entity.claims.P585.length > 0) {
-      startDate = extractDateFromClaim(entity.claims.P585[0]);
-    }
-    // Try P571 (inception) if still no start time
-    if (!startDate && entity.claims.P571 && entity.claims.P571.length > 0) {
-      startDate = extractDateFromClaim(entity.claims.P571[0]);
+  // Try start date synonyms in priority order
+  for (const propId of DATE_PROPERTY_SYNONYMS.startDate) {
+    if (entity.claims[propId] && entity.claims[propId].length > 0) {
+      const date = extractDateFromClaim(entity.claims[propId][0]);
+      if (date) {
+        startDate = date;
+        break; // Use first found start date
+      }
     }
   }
   
-  if (!endDate && entity.claims.P582 && entity.claims.P582.length > 0) {
-    endDate = extractDateFromClaim(entity.claims.P582[0]);
+  // Try end date synonyms in priority order
+  for (const propId of DATE_PROPERTY_SYNONYMS.endDate) {
+    if (entity.claims[propId] && entity.claims[propId].length > 0) {
+      const date = extractDateFromClaim(entity.claims[propId][0]);
+      if (date) {
+        endDate = date;
+        break; // Use first found end date
+      }
+    }
   }
   
   // Fallback: try to find any time-type claim if we don't have dates yet

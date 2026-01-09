@@ -53,17 +53,29 @@ class Person(BaseEntity):
         return label if label else self.name
     
     def get_computed_birth_date(self) -> Optional[str]:
-        """Get birth date from claims (P569) if available."""
-        claim = self.get_best_claim(Property.DATE_OF_BIRTH)
-        if claim:
-            return extract_time_from_claim(claim)
+        """Get birth date from claims using property synonyms configuration."""
+        from python_aws_starter.models.property_synonyms import get_start_date_properties
+        
+        # Try all start date synonyms (including P569 for birth date)
+        for prop_id in get_start_date_properties():
+            claim = self.get_best_claim(prop_id)
+            if claim:
+                date_str = extract_time_from_claim(claim)
+                if date_str:
+                    return date_str
         return self.birth_date
     
     def get_computed_death_date(self) -> Optional[str]:
-        """Get death date from claims (P570) if available."""
-        claim = self.get_best_claim(Property.DATE_OF_DEATH)
-        if claim:
-            return extract_time_from_claim(claim)
+        """Get death date from claims using property synonyms configuration."""
+        from python_aws_starter.models.property_synonyms import get_end_date_properties
+        
+        # Try all end date synonyms (including P570 for death date)
+        for prop_id in get_end_date_properties():
+            claim = self.get_best_claim(prop_id)
+            if claim:
+                date_str = extract_time_from_claim(claim)
+                if date_str:
+                    return date_str
         return self.death_date
     
     def get_computed_description(self) -> str:
