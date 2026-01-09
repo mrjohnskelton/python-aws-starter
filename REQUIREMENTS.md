@@ -37,7 +37,7 @@ The **Timeline Application** is a highly-interactive visual interface for explor
 2. **Hierarchical Zoom**: Explore data at different scales (from geological ages to milliseconds, villages to planetary)
 3. **Multi-Source Integration**: Combine data from curated sources, public data, and user submissions
 4. **User Contributions**: Enable power users to submit corrections and new data with a review workflow
-5. **Random Entity Discovery**: Frontend automatically loads a random Wikidata entity on initial page load to provide immediate engagement
+5. **Random Entity Discovery**: Frontend automatically loads a random person entity (filtered by instance of Q5/human) from Wikidata on initial page load to provide immediate engagement with relevant content
 6. **Entity Detail Panel**: Comprehensive detail view showing full Wikidata entity information (labels, descriptions, claims, Wikipedia links) when a card is selected
 
 ## Development Standards
@@ -71,7 +71,7 @@ Primary expectations for the OPA:
 - Provide search UI to query dimensions (`/search/{dimension}`) and display results in an accessible grid/list.
 - Provide pivot controls to switch from one dimension to another (`/pivot?from=...&to=...&id=...`).
 - Provide Zoom controls to change result density/detail level; zoom levels should be exposed to users and affect rendered detail.
-- **Auto-populate on load**: Automatically fetch and display a random Wikidata entity when the page first loads to avoid a blank initial state.
+- **Auto-populate on load**: Automatically fetch and display a random person entity (filtered by instance of Q5/human) from Wikidata when the page first loads to avoid a blank initial state and provide relevant initial content.
 - Accessibility: ARIA labels, keyboard navigation (tab/Enter), visible focus states, and sufficient color contrast.
 - Lightweight and static: implementable with vanilla JS (no heavy framework required for demo) and runnable via a simple static server (`python -m http.server`) or embedded in the production frontend build.
 - Configurable API base URL for local testing (default `http://localhost:8000`).

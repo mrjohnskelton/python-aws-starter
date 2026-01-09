@@ -107,6 +107,9 @@ async function selectItem(idx, el){
   // Fetch and display full entity details
   await loadEntityDetails(selectedItem);
   
+  // Update timeline to highlight selected item
+  updateVisualizations(lastResults, $('#dimension').value, selectedItem);
+  
   // center map on selected item's first location if available
   if(map && selectedItem && selectedItem.locations && selectedItem.locations.length){
     const loc = selectedItem.locations[0];
@@ -317,6 +320,80 @@ function getDescription(item, lang = 'en') {
   return item.description || null;
 }
 
+/**
+ * Extract start and end dates from entity claims.
+ * Handles different property IDs for different entity types:
+ * - People: P569 (birth date), P570 (death date)
+ * - Events: P580 (start time), P582 (end time), P585 (point in time), P571 (inception)
+ * - Other entities: Tries to find any date-related claims
+ */
+function extractDatesFromClaims(entity) {
+  let startDate = null;
+  let endDate = null;
+  
+  if (!entity.claims) {
+    return { startDate, endDate };
+  }
+  
+  // Helper to extract date from a claim
+  const extractDateFromClaim = (claim) => {
+    if (!claim || !claim.mainsnak) return null;
+    const datavalue = claim.mainsnak.datavalue;
+    if (!datavalue || datavalue.type !== 'time') return null;
+    const timeValue = datavalue.value;
+    if (!timeValue || !timeValue.time) return null;
+    // Extract date from Wikidata time format: +1769-08-15T00:00:00Z
+    const timeStr = timeValue.time.replace(/^\+/, '').split('T')[0];
+    return timeStr;
+  };
+  
+  // For people: P569 (birth date), P570 (death date)
+  if (entity.claims.P569 && entity.claims.P569.length > 0) {
+    startDate = extractDateFromClaim(entity.claims.P569[0]);
+  }
+  if (entity.claims.P570 && entity.claims.P570.length > 0) {
+    endDate = extractDateFromClaim(entity.claims.P570[0]);
+  }
+  
+  // For events: P580 (start time), P582 (end time), P585 (point in time), P571 (inception)
+  if (!startDate) {
+    // Try P580 (start time)
+    if (entity.claims.P580 && entity.claims.P580.length > 0) {
+      startDate = extractDateFromClaim(entity.claims.P580[0]);
+    }
+    // Try P585 (point in time) if no start time
+    if (!startDate && entity.claims.P585 && entity.claims.P585.length > 0) {
+      startDate = extractDateFromClaim(entity.claims.P585[0]);
+    }
+    // Try P571 (inception) if still no start time
+    if (!startDate && entity.claims.P571 && entity.claims.P571.length > 0) {
+      startDate = extractDateFromClaim(entity.claims.P571[0]);
+    }
+  }
+  
+  if (!endDate && entity.claims.P582 && entity.claims.P582.length > 0) {
+    endDate = extractDateFromClaim(entity.claims.P582[0]);
+  }
+  
+  // Fallback: try to find any time-type claim if we don't have dates yet
+  if (!startDate || !endDate) {
+    for (const [propId, claims] of Object.entries(entity.claims)) {
+      if (Array.isArray(claims) && claims.length > 0) {
+        const claim = claims[0];
+        if (claim.mainsnak && claim.mainsnak.datavalue && claim.mainsnak.datavalue.type === 'time') {
+          const date = extractDateFromClaim(claim);
+          if (date) {
+            if (!startDate) startDate = date;
+            else if (!endDate && date !== startDate) endDate = date;
+          }
+        }
+      }
+    }
+  }
+  
+  return { startDate, endDate };
+}
+
 async function search(dim, q){
   try{
     // Map frontend dimension names to API endpoint names
@@ -360,26 +437,40 @@ async function pivot(fromDim, toDim){
   updateVisualizations(body.results || body || [], toDim);
 }
 
-function updateVisualizations(items, dim){
-  renderGanttTimeline(items);
+function updateVisualizations(items, dim, selectedItemForHighlight = null){
+  renderGanttTimeline(items, selectedItemForHighlight);
   renderSVGMap(items);
 }
 
-function renderGanttTimeline(items){
+function renderGanttTimeline(items, selectedItemForHighlight = null){
   const el = document.getElementById('timeline');
   el.innerHTML = '';
   if(!items || items.length===0) return;
   
   const parsed = items.map(it=>{
-    const sd = (it.start_date && it.start_date.start_date) || (it.start_date && it.start_date) || it.birth_date || it.created_at;
-    const ed = (it.start_date && it.start_date.end_date) || (it.end_date && it.end_date) || it.death_date;
+    // Try to extract dates from claims first (for Wikidata entities)
+    let sd = null, ed = null;
+    if (it.claims) {
+      const dates = extractDatesFromClaims(it);
+      sd = dates.startDate;
+      ed = dates.endDate;
+    }
+    
+    // Fallback to traditional fields if no claims
+    if (!sd) {
+      sd = (it.start_date && it.start_date.start_date) || (it.start_date && it.start_date) || it.birth_date || it.created_at;
+    }
+    if (!ed) {
+      ed = (it.start_date && it.start_date.end_date) || (it.end_date && it.end_date) || it.death_date;
+    }
+    
     let startYear = null, endYear = null;
     if(sd){
-      const m = sd.match(/-?\d{1,4}/);
+      const m = String(sd).match(/-?\d{1,4}/);
       if(m) startYear = parseInt(m[0],10);
     }
     if(ed){
-      const m = ed.match(/-?\d{1,4}/);
+      const m = String(ed).match(/-?\d{1,4}/);
       if(m) endYear = parseInt(m[0],10);
     }
     return {item:it, startYear, endYear};
@@ -395,19 +486,26 @@ function renderGanttTimeline(items){
   const container = document.createElement('div');
   container.style.position = 'relative';
   
+  // Determine if selected item should be highlighted
+  const selectedItemId = selectedItemForHighlight ? (selectedItemForHighlight.id || null) : null;
+  
   parsed.forEach((p, idx)=>{
     const isRange = p.endYear !== null && p.endYear !== p.startYear;
     const startPos = ((p.startYear - minYear) / range) * 100;
     const endPos = isRange ? ((p.endYear - minYear) / range) * 100 : startPos + 3;
     const width = Math.max(2, endPos - startPos);
     
+    // Check if this is the selected item
+    const isSelected = selectedItemId && (p.item.id === selectedItemId || 
+      (p.item.id && selectedItemId && p.item.id.toString() === selectedItemId.toString()));
+    
     const bar = document.createElement('div');
-    bar.className = 'timeline-bar';
+    bar.className = isSelected ? 'timeline-bar timeline-bar-selected' : 'timeline-bar';
     bar.style.width = width + '%';
     bar.style.marginLeft = startPos + '%';
-    bar.style.opacity = Math.max(0.4, 1 - (p.item.confidence || 0.5) * 0.3);
-    bar.title = `${p.item.title||p.item.name} (${p.startYear}${p.endYear && p.endYear !== p.startYear ? '-'+p.endYear : ''})`;
-    bar.innerHTML = `<span>${p.item.title || p.item.name}</span>`;
+    bar.style.opacity = isSelected ? 1.0 : Math.max(0.4, 1 - (p.item.confidence || 0.5) * 0.3);
+    bar.title = `${getLabel(p.item) || p.item.title || p.item.name} (${p.startYear}${p.endYear && p.endYear !== p.startYear ? '-'+p.endYear : ''})`;
+    bar.innerHTML = `<span>${getLabel(p.item) || p.item.title || p.item.name}</span>`;
     
     bar.addEventListener('click', ()=>{
       const index = lastResults.indexOf(p.item);
@@ -523,18 +621,18 @@ setSummary(0,'results');
 // Load random entity on page load to populate the frontend
 async function loadRandomEntity() {
   try {
-    console.log('[loadRandomEntity] Fetching random entity...');
-    const res = await fetch(`${API_BASE}/random`);
+    console.log('[loadRandomEntity] Fetching random person entity (Q5)...');
+    // Filter by instance of Q5 (human/person) to only get person entities
+    const res = await fetch(`${API_BASE}/random?instance_of=Q5`);
     if (!res.ok) {
       console.warn('[loadRandomEntity] Failed to fetch random entity:', res.status);
       return;
     }
     const entity = await res.json();
-    console.log('[loadRandomEntity] Received random entity:', entity);
+    console.log('[loadRandomEntity] Received random person entity:', entity);
     
-    // Determine dimension based on entity structure or default to 'people'
-    // Since we're using WikibaseEntity, we'll default to 'people' dimension
-    const dim = 'people'; // Could be enhanced to detect entity type from claims
+    // Since we're filtering for people, use 'people' dimension
+    const dim = 'people';
     
     // Display the random entity
     renderResults([entity], dim);

@@ -30,6 +30,12 @@ Users can navigate at different levels of detail:
 - **People**: From individuals to entire civilizations
 - **Events**: From individual events to eras
 
+### Random Entity Discovery
+On initial page load, the frontend automatically displays a random person entity from Wikidata:
+- **Person Filtering**: Uses SPARQL query with `instance_of=Q5` filter to only return human/person entities
+- **Immediate Engagement**: Prevents blank initial state by showing a person entity immediately
+- **Consistent Experience**: Users always start with a person entity, making the initial experience more predictable and relevant
+
 ### Entity Detail Panel
 When a user selects a card from the search results, a detail panel appears below the list showing:
 - **Full Entity Information**: Complete Wikidata entity data fetched via `/wikidata/entity/{qid}` endpoint
