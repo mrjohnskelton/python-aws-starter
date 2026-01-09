@@ -107,16 +107,15 @@ async function selectItem(idx, el){
   // Fetch and display full entity details
   await loadEntityDetails(selectedItem);
   
-  // Update timeline to highlight selected item
+  // Update timeline and map to highlight selected item
   updateVisualizations(lastResults, $('#dimension').value, selectedItem);
   
-  // center map on selected item's first location if available
-  if(map && selectedItem && selectedItem.locations && selectedItem.locations.length){
-    const loc = selectedItem.locations[0];
-    const geo = loc.geography_id ? geoIndex[loc.geography_id] : null;
-    const lat = loc.latitude || (geo && geo.center_coordinate && geo.center_coordinate.latitude);
-    const lon = loc.longitude || (geo && geo.center_coordinate && geo.center_coordinate.longitude);
-    if(lat && lon) map.setView([lat, lon], Math.max(3,map.getZoom()));
+  // Center map on selected item's location if available
+  if(selectedItem) {
+    const coords = extractCoordinatesFromEntity(selectedItem);
+    if(coords.lat !== null && coords.lon !== null && map) {
+      map.setView([coords.lat, coords.lon], Math.max(3, map.getZoom()));
+    }
   }
 }
 
@@ -439,7 +438,7 @@ async function pivot(fromDim, toDim){
 
 function updateVisualizations(items, dim, selectedItemForHighlight = null){
   renderGanttTimeline(items, selectedItemForHighlight);
-  renderSVGMap(items);
+  renderSVGMap(items, selectedItemForHighlight);
 }
 
 function renderGanttTimeline(items, selectedItemForHighlight = null){
@@ -519,7 +518,68 @@ function renderGanttTimeline(items, selectedItemForHighlight = null){
   el.appendChild(container);
 }
 
-function renderSVGMap(items){
+/**
+ * Extract coordinates from entity claims or location data.
+ * Handles P625 (coordinate location) for geographies and location references for events.
+ */
+function extractCoordinatesFromEntity(entity) {
+  let lat = null, lon = null;
+  
+  // Try to extract from claims (P625 for coordinate location)
+  if (entity.claims && entity.claims.P625 && entity.claims.P625.length > 0) {
+    const claim = entity.claims.P625[0];
+    if (claim.mainsnak && claim.mainsnak.datavalue && claim.mainsnak.datavalue.type === 'globecoordinate') {
+      const coordValue = claim.mainsnak.datavalue.value;
+      if (coordValue && typeof coordValue.latitude === 'number' && typeof coordValue.longitude === 'number') {
+        lat = coordValue.latitude;
+        lon = coordValue.longitude;
+        return { lat, lon };
+      }
+    }
+  }
+  
+  // Try from computed_center_coordinate (for Geography entities)
+  if (entity.computed_center_coordinate) {
+    lat = entity.computed_center_coordinate.latitude;
+    lon = entity.computed_center_coordinate.longitude;
+    if (lat !== null && lon !== null) {
+      return { lat, lon };
+    }
+  }
+  
+  // Try from center_coordinate (direct field)
+  if (entity.center_coordinate) {
+    lat = entity.center_coordinate.latitude;
+    lon = entity.center_coordinate.longitude;
+    if (lat !== null && lon !== null) {
+      return { lat, lon };
+    }
+  }
+  
+  // Try from locations array (for Event entities)
+  if (entity.locations && entity.locations.length > 0) {
+    const loc = entity.locations[0];
+    lat = loc.latitude;
+    lon = loc.longitude;
+    
+    // If no direct coordinates, try to get from geography reference
+    if ((lat === null || lon === null) && loc.geography_id) {
+      const geo = geoIndex[loc.geography_id];
+      if (geo) {
+        lat = geo.center_coordinate?.latitude || geo.computed_center_coordinate?.latitude;
+        lon = geo.center_coordinate?.longitude || geo.computed_center_coordinate?.longitude;
+      }
+    }
+    
+    if (lat !== null && lon !== null) {
+      return { lat, lon };
+    }
+  }
+  
+  return { lat: null, lon: null };
+}
+
+function renderSVGMap(items, selectedItemForHighlight = null){
   const svg = document.getElementById('mapCanvas');
   if(!svg) return;
   
@@ -530,43 +590,47 @@ function renderSVGMap(items){
   const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
   const svgWidth = viewBox[2], svgHeight = viewBox[3];
   
+  // Determine selected item ID for highlighting
+  const selectedItemId = selectedItemForHighlight ? (selectedItemForHighlight.id || null) : null;
+  
   items.forEach(item=>{
-    if(!item.locations || item.locations.length===0) return;
+    // Extract coordinates from entity
+    const coords = extractCoordinatesFromEntity(item);
+    const lat = coords.lat;
+    const lon = coords.lon;
     
-    item.locations.forEach(loc=>{
-      const geo = loc.geography_id ? geoIndex[loc.geography_id] : null;
-      const lat = loc.latitude || (geo && geo.center_coordinate && geo.center_coordinate.latitude);
-      const lon = loc.longitude || (geo && geo.center_coordinate && geo.center_coordinate.longitude);
+    if(lat !== null && lon !== null){
+      const x = ((lon + 180) / 360) * svgWidth;
+      const y = ((90 - lat) / 180) * svgHeight;
       
-      if(lat !== null && lon !== null){
-        const x = ((lon + 180) / 360) * svgWidth;
-        const y = ((90 - lat) / 180) * svgHeight;
-        
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'map-pin');
-        g.setAttribute('transform', `translate(${x},${y})`);
-        
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('r', '8');
-        circle.setAttribute('cx', '0');
-        circle.setAttribute('cy', '0');
-        
-        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-        title.textContent = `${item.title||item.name} - ${loc.name||''}`;
-        
-        g.appendChild(circle);
-        g.appendChild(title);
-        
-        g.addEventListener('click', ()=>{
-          const index = lastResults.indexOf(item);
-          const el = listEl.querySelector(`[data-index="${index}"]`);
-          if(el) el.focus(), selectItem(index, el);
-        });
-        
-        svg.appendChild(g);
-      }
-    })
-  })
+      // Check if this is the selected item
+      const isSelected = selectedItemId && (item.id === selectedItemId || 
+        (item.id && selectedItemId && item.id.toString() === selectedItemId.toString()));
+      
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', isSelected ? 'map-pin map-pin-selected' : 'map-pin');
+      g.setAttribute('transform', `translate(${x},${y})`);
+      
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('r', isSelected ? '12' : '8');
+      circle.setAttribute('cx', '0');
+      circle.setAttribute('cy', '0');
+      
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = `${getLabel(item) || item.title || item.name}${item.locations && item.locations[0] ? ' - ' + (item.locations[0].name || '') : ''}`;
+      
+      g.appendChild(circle);
+      g.appendChild(title);
+      
+      g.addEventListener('click', ()=>{
+        const index = lastResults.indexOf(item);
+        const el = listEl.querySelector(`[data-index="${index}"]`);
+        if(el) el.focus(), selectItem(index, el);
+      });
+      
+      svg.appendChild(g);
+    }
+  });
 }
 
 // UI wiring

@@ -47,6 +47,22 @@ When a user selects a card from the search results, a detail panel appears below
 
 The detail panel automatically fetches full entity data when a Wikidata entity (QID) is detected, providing rich context beyond the lightweight search results.
 
+### Synchronized Visualizations
+When a user selects a different card, both the timeline and map visualizations automatically update to reflect the selected card's content:
+
+- **Timeline Updates**: 
+  - Extracts start/end dates from Wikidata claims (P569, P570, P580, P582, etc.) or traditional fields
+  - Highlights the selected card's date range on the timeline with enhanced visual styling
+  - Updates immediately when selection changes
+
+- **Map Updates**:
+  - Extracts coordinates from Wikidata claims (P625 for geographies) or location references
+  - Highlights the selected card's location with a larger, more prominent pin
+  - Supports multiple coordinate sources: claims, computed_center_coordinate, center_coordinate, or locations array
+  - Updates immediately when selection changes
+
+- **Real-time Synchronization**: Both visualizations update simultaneously when a card is selected, providing immediate visual feedback and context about the selected entity's temporal and geographic position.
+
 ## Related Documentation
 
 - [Architecture Decision Records](../decisions/)

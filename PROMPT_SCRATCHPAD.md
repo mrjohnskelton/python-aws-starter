@@ -8,6 +8,7 @@ Get the timeline and map working better
 
 Where a card has a start date and end date, use these to update the timeline for the selected card. For example, for a person these fields seem to be P569 or 'BIRTH DATE:' and P570 or DEATH DATE:'.  Other types of entry may have different start/end date codes/names but I want to pick them up wherever possible regardless of the type of entry (for example the Jurrasic Age was not born or died, but will have start/end dates with appropriate unit of magnitude as per original requirements).
 Update the non-functional requirements markdown to reflect this feature.
+Test and deploy these changes.
 
 
 ### Non-Functional Features
