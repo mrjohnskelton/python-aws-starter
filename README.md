@@ -74,7 +74,9 @@ python3 -m http.server 8080
 # then open http://localhost:8080 in your browser
 ```
 
-3. In the SPA click "Load local sample data" to load the bundled sample dataset, or use the Search form to query the running API at `http://localhost:8000`.
+3. The SPA automatically loads a random Wikidata entity on page load. You can also:
+   - Click "Load local sample data" to load the bundled sample dataset
+   - Use the Search form to query the running API at `http://localhost:8000`
 
 Notes:
 
@@ -84,6 +86,12 @@ Notes:
 ### Example requests
 
 ```bash
+# Get a random Wikidata entity (used by frontend on initial load)
+curl 'http://127.0.0.1:8000/random'
+
+# Get a random human (filter by instance of Q5)
+curl 'http://127.0.0.1:8000/random?instance_of=Q5'
+
 # Pivot people -> events
 curl 'http://127.0.0.1:8000/pivot?from=people&to=events&id=person_napoleon'
 

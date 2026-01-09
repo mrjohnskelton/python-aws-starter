@@ -299,6 +299,31 @@ def get_wikidata_entity_by_qid(qid: str):
         raise HTTPException(status_code=500, detail=f"Error fetching entity: {str(e)}")
 
 
+@app.get("/random")
+def get_random_entity(instance_of: Optional[str] = Query(None, description="Optional QID to filter by instance of (e.g., Q5 for human)")):
+    """Get a random Wikidata entity to populate the frontend on initial load.
+    
+    Uses SPARQL to fetch a random entity from Wikidata. Can optionally filter
+    by instance of a specific class (e.g., Q5 for human, Q1656682 for event).
+    
+    Example: /random
+    Example: /random?instance_of=Q5 (random human)
+    
+    Returns:
+        WikibaseEntity model as JSON
+    """
+    try:
+        entity = wd.get_random_wikidata_entity(instance_of=instance_of)
+        if not entity:
+            raise HTTPException(status_code=404, detail="No random entity found")
+        return entity.model_dump()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching random entity: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching random entity: {str(e)}")
+
+
 @app.get("/search/by-property")
 def search_by_property(
     property_id: str = Query(..., description="Property ID to search (e.g., P569 for date of birth)"),

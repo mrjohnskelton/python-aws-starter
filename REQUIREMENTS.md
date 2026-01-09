@@ -37,6 +37,7 @@ The **Timeline Application** is a highly-interactive visual interface for explor
 2. **Hierarchical Zoom**: Explore data at different scales (from geological ages to milliseconds, villages to planetary)
 3. **Multi-Source Integration**: Combine data from curated sources, public data, and user submissions
 4. **User Contributions**: Enable power users to submit corrections and new data with a review workflow
+5. **Random Entity Discovery**: Frontend automatically loads a random Wikidata entity on initial page load to provide immediate engagement
 
 ## Development Standards
 
@@ -69,6 +70,7 @@ Primary expectations for the OPA:
 - Provide search UI to query dimensions (`/search/{dimension}`) and display results in an accessible grid/list.
 - Provide pivot controls to switch from one dimension to another (`/pivot?from=...&to=...&id=...`).
 - Provide Zoom controls to change result density/detail level; zoom levels should be exposed to users and affect rendered detail.
+- **Auto-populate on load**: Automatically fetch and display a random Wikidata entity when the page first loads to avoid a blank initial state.
 - Accessibility: ARIA labels, keyboard navigation (tab/Enter), visible focus states, and sufficient color contrast.
 - Lightweight and static: implementable with vanilla JS (no heavy framework required for demo) and runnable via a simple static server (`python -m http.server`) or embedded in the production frontend build.
 - Configurable API base URL for local testing (default `http://localhost:8000`).
@@ -77,8 +79,9 @@ Acceptance criteria for the OPA:
 
 1. Demonstrable search, pivot and zoom interactions against the running demo API.
 2. Basic keyboard navigation and ARIA labels present for primary controls.
-3. Documentation in `frontend/README.md` describing how to run the demo and change the API base.
-4. Example usage for developers: sample calls to `/search` and `/pivot` in the client code.
+3. **Random entity displayed on initial page load** - frontend fetches from `/random` endpoint and displays result automatically.
+4. Documentation in `frontend/README.md` describing how to run the demo and change the API base.
+5. Example usage for developers: sample calls to `/search`, `/pivot`, and `/random` in the client code.
 
 ### OPA Widget Design: Timeline & Map Separation
 

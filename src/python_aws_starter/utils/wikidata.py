@@ -30,6 +30,88 @@ WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
 WIKIDATA_USER_AGENT = "python-aws-starter/0.1.0 (https://github.com/mrjohnskelton/python-aws-starter; contact via GitHub)"
 
 
+def get_random_wikidata_entities(limit: int = 1, instance_of: Optional[str] = None) -> List[str]:
+    """Get random Wikidata entity QIDs using SPARQL.
+    
+    Uses Wikidata Query Service to fetch random entities. Can optionally filter
+    by instance of a specific class (e.g., Q5 for human, Q1656682 for event).
+    
+    Args:
+        limit: Number of random entities to return
+        instance_of: Optional QID to filter by instance of (e.g., "Q5" for human)
+    
+    Returns:
+        List of entity QIDs (e.g., ["Q517", "Q123"])
+    """
+    import random
+    
+    # Build SPARQL query - use a simpler approach that's more reliable
+    if instance_of:
+        query = f"""
+        SELECT ?item WHERE {{
+            ?item wdt:P31 wd:{instance_of} .
+            ?item wikibase:sitelinks ?sitelinks .
+        }} LIMIT 1000
+        """
+    else:
+        # Get items with sitelinks (more likely to have good data)
+        query = """
+        SELECT ?item WHERE {
+            ?item wikibase:sitelinks ?sitelinks .
+        } LIMIT 1000
+        """
+    
+    try:
+        headers = {
+            "User-Agent": WIKIDATA_USER_AGENT,
+            "Accept": "application/sparql-results+json"
+        }
+        params = {"query": query, "format": "json"}
+        
+        logger.debug("[wikidata] SPARQL random query -> url=%s", WIKIDATA_SPARQL_URL)
+        response = requests.get(WIKIDATA_SPARQL_URL, params=params, headers=headers, timeout=15)
+        logger.debug("[wikidata] SPARQL response status=%s", response.status_code)
+        response.raise_for_status()
+        
+        data = response.json()
+        results = data.get("results", {}).get("bindings", [])
+        
+        if not results:
+            logger.warning("[wikidata] SPARQL returned no results")
+            return []
+        
+        # Randomly sample from results
+        sampled = random.sample(results, min(limit, len(results)))
+        
+        qids = []
+        for result in sampled:
+            item_uri = result.get("item", {}).get("value", "")
+            # Extract QID from URI (e.g., "http://www.wikidata.org/entity/Q517" -> "Q517")
+            if "/entity/" in item_uri:
+                qid = item_uri.split("/entity/")[-1]
+                qids.append(qid)
+        
+        logger.info(f"[wikidata] SPARQL returned {len(qids)} random entities from {len(results)} total")
+        return qids
+    except Exception as e:
+        logger.exception("[wikidata] SPARQL random query error: %s", e)
+        # Fallback: use search API with common terms
+        logger.info("[wikidata] Falling back to search API for random entity")
+        try:
+            # Search for common terms and pick random result
+            common_terms = ["the", "a", "of", "in", "and"]
+            term = random.choice(common_terms)
+            search_results = search_wikidata_entities(term, limit=50)
+            if search_results:
+                sampled = random.sample(search_results, min(limit, len(search_results)))
+                qids = [r.get("id", "") for r in sampled if r.get("id", "")]
+                logger.info(f"[wikidata] Fallback search returned {len(qids)} entities")
+                return qids
+        except Exception as fallback_error:
+            logger.exception("[wikidata] Fallback search also failed: %s", fallback_error)
+        return []
+
+
 def _log_body(body: str, operation: str = "request") -> None:
     """Log request/response body if configured."""
     if config.wikidata_log_body:
@@ -132,7 +214,7 @@ def get_wikidata_entity(qid: str, use_entity_data: bool = False) -> Optional[Dic
         params = {
             "action": "wbgetentities",
             "ids": qid,
-            "props": "labels|descriptions|claims|sitelinks",
+            "props": "labels|descriptions|claims|sitelinks|aliases",
             "languages": "en",
             "format": "json",
         }
@@ -307,6 +389,65 @@ def _search_hit_to_lightweight_geography(search_hit: Dict[str, Any]) -> Geograph
         confidence=0.7,
     )
     return geography
+
+
+def get_random_wikidata_entity(instance_of: Optional[str] = None) -> Optional["WikibaseEntity"]:
+    """Get a single random Wikidata entity as WikibaseEntity.
+    
+    Uses SPARQL to get a random entity QID, then fetches full entity data
+    and converts it to WikibaseEntity.
+    
+    Args:
+        instance_of: Optional QID to filter by instance of (e.g., "Q5" for human)
+    
+    Returns:
+        WikibaseEntity or None if no entity found
+    """
+    from python_aws_starter.models.wikidata_meta import WikibaseEntity
+    
+    # Get random QID using SPARQL
+    qids = get_random_wikidata_entities(limit=1, instance_of=instance_of)
+    if not qids:
+        logger.warning("[wikidata] No random QIDs returned from SPARQL")
+        return None
+    
+    qid = qids[0]
+    logger.info(f"[wikidata] Got random QID: {qid}")
+    
+    # Fetch full entity data
+    entity_data = get_wikidata_entity(qid)
+    if not entity_data:
+        logger.warning(f"[wikidata] Could not fetch entity data for QID: {qid}")
+        return None
+    
+    # Convert to WikibaseEntity
+    try:
+        # Extract labels, descriptions, aliases, claims
+        labels = entity_data.get("labels", {})
+        descriptions = entity_data.get("descriptions", {})
+        aliases = entity_data.get("aliases", {})
+        claims_raw = entity_data.get("claims", {})
+        
+        # Convert claims to our Claim models
+        claims = _convert_wikidata_claims_to_model_claims(claims_raw)
+        
+        entity = WikibaseEntity(
+            id=qid,
+            type=entity_data.get("type", "item"),
+            labels=labels,
+            descriptions=descriptions,
+            aliases=aliases,
+            claims=claims,
+            sitelinks=entity_data.get("sitelinks"),
+            lastrevid=entity_data.get("lastrevid"),
+            modified=entity_data.get("modified"),
+        )
+        
+        logger.info(f"[wikidata] Successfully created WikibaseEntity for {qid}")
+        return entity
+    except Exception as e:
+        logger.exception(f"[wikidata] Error converting entity {qid} to WikibaseEntity: {e}")
+        return None
 
 
 def search_wikidata_entities_as_wikibase(query: str, limit: int = 10) -> List["WikibaseEntity"]:

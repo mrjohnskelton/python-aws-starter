@@ -312,6 +312,33 @@ document.addEventListener('keydown', (e)=>{
 $('#zoomLevel').textContent = zoom;
 setSummary(0,'results');
 
+// Load random entity on page load to populate the frontend
+async function loadRandomEntity() {
+  try {
+    console.log('[loadRandomEntity] Fetching random entity...');
+    const res = await fetch(`${API_BASE}/random`);
+    if (!res.ok) {
+      console.warn('[loadRandomEntity] Failed to fetch random entity:', res.status);
+      return;
+    }
+    const entity = await res.json();
+    console.log('[loadRandomEntity] Received random entity:', entity);
+    
+    // Determine dimension based on entity structure or default to 'people'
+    // Since we're using WikibaseEntity, we'll default to 'people' dimension
+    const dim = 'people'; // Could be enhanced to detect entity type from claims
+    
+    // Display the random entity
+    renderResults([entity], dim);
+  } catch (err) {
+    console.error('[loadRandomEntity] Error:', err);
+    // Silently fail - it's okay if random entity doesn't load
+  }
+}
+
+// Load random entity when page loads
+loadRandomEntity();
+
 // Expose API_BASE in DOM
 document.getElementById('apiBase').textContent = API_BASE;
 
