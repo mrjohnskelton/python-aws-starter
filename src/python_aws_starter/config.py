@@ -113,6 +113,19 @@ class ApplicationConfig:
         )
         self.cache = cache or CacheConfig()
         self.dimensions = DimensionConfig()
+        # Data source configuration: 'local' or 'wikidata'
+        self.data_source = "local"
+        # Wikidata specific options
+        self.wikidata_api = {
+            "base_url": "https://www.wikidata.org/w/api.php",
+            "entity_url": "https://www.wikidata.org/wiki/Special:EntityData/",
+            "limit": 10,
+        }
+        # Logging configuration
+        self.log_level = "INFO"
+        # Wikidata response body logging
+        self.wikidata_log_body = False
+        self.wikidata_log_body_max = 1000
 
     @classmethod
     def from_env(cls) -> "ApplicationConfig":
@@ -138,7 +151,30 @@ class ApplicationConfig:
             ttl_seconds=int(os.getenv("CACHE_TTL", "3600")),
         )
 
-        return cls(environment=env, debug=debug, database=db, cache=cache)
+        # data source selection
+        data_source = os.getenv("DATA_SOURCE", "local")
+
+        # wikidata settings
+        wikidata_limit = int(os.getenv("WIKIDATA_LIMIT", "10"))
+        wikidata_base = os.getenv("WIKIDATA_API_BASE", "https://www.wikidata.org/w/api.php")
+        wikidata_entity = os.getenv("WIKIDATA_ENTITY_BASE", "https://www.wikidata.org/wiki/Special:EntityData/")
+        
+        # logging settings
+        log_level = os.getenv("LOG_LEVEL", "DEBUG" if debug else "INFO")
+        
+        # wikidata body logging settings
+        wikidata_log_body = os.getenv("WIKIDATA_LOG_BODY", "false").lower() == "true"
+        wikidata_log_body_max = int(os.getenv("WIKIDATA_LOG_BODY_MAX", "1000"))
+
+        inst = cls(environment=env, debug=debug, database=db, cache=cache)
+        inst.data_source = data_source
+        inst.wikidata_api["limit"] = wikidata_limit
+        inst.wikidata_api["base_url"] = wikidata_base
+        inst.wikidata_api["entity_url"] = wikidata_entity
+        inst.log_level = log_level
+        inst.wikidata_log_body = wikidata_log_body
+        inst.wikidata_log_body_max = wikidata_log_body_max
+        return inst
 
 
 # Global configuration instance

@@ -1,13 +1,34 @@
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
+import logging
 
 from python_aws_starter.repositories.in_memory import InMemoryRepository
+from python_aws_starter.config import config
 from tests.fixtures import sample_dataset as sd
+
+
+# Configure root logging early so repository modules use the same configuration.
+numeric_level = getattr(logging, config.log_level.upper(), logging.INFO)
+logging.basicConfig(level=numeric_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 app = FastAPI(title="Timeline Pivot API")
 
-# Initialize a demo repository from test fixtures (suitable for local demo/dev)
-_repo = InMemoryRepository(events=sd.get_events(), people=sd.get_people(), geographies=sd.get_geographies())
+# Choose repository implementation based on configuration (local | wikidata)
+if getattr(config, "data_source", "local") == "wikidata":
+    try:
+        from python_aws_starter.repositories.wikidata import WikidataRepository
+
+        _repo = WikidataRepository(
+            base_url=config.wikidata_api.get("base_url"),
+            entity_url=config.wikidata_api.get("entity_url"),
+            limit=int(config.wikidata_api.get("limit", 10)),
+        )
+    except Exception:
+        # Fallback to in-memory demo repository if Wikidata wiring fails
+        _repo = InMemoryRepository(events=sd.get_events(), people=sd.get_people(), geographies=sd.get_geographies())
+else:
+    # Initialize a demo repository from test fixtures (suitable for local demo/dev)
+    _repo = InMemoryRepository(events=sd.get_events(), people=sd.get_people(), geographies=sd.get_geographies())
 
 
 @app.get("/pivot")

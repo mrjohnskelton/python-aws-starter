@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+  <rect width="100%" height="100%" fill="#f8fafc" />
+  <g fill="#cbd5e1" stroke="#e2e8f0" stroke-width="1">
+    <!-- simplified continent shapes (placeholder) -->
+    <path d="M80 200 C140 160 200 150 260 170 C320 190 360 220 420 230 C480 240 540 230 600 210 C660 190 720 170 780 170 L820 180 L840 200 L820 220 L760 240 C700 260 640 270 580 270 C520 270 460 260 400 250 C340 240 260 240 200 260 C140 280 100 240 80 200 Z" />
+    <path d="M120 360 C180 340 240 330 300 340 C360 350 420 380 480 380 C540 380 600 360 660 340 C720 320 780 300 840 300 L860 320 L840 340 L780 360 C720 380 660 390 600 390 C540 390 480 380 420 370 C360 360 300 360 240 370 C180 380 140 360 120 360 Z" />
+  </g>
+  <text x="50%" y="96%" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" fill="#475569">World map placeholder (no tiles)</text>
+</svg>
