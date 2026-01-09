@@ -1,7 +1,11 @@
-"""Wikidata search and data retrieval utilities."""
+"""Wikidata search and data retrieval utilities.
+
+This module provides both utility functions and a repository class for querying
+Wikidata and converting results to the project's domain models.
+"""
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 import requests
 from datetime import datetime
 
@@ -28,8 +32,17 @@ def _log_body(body: str, operation: str = "request") -> None:
             logger.debug(f"Wikidata {operation} body: {body_str}")
 
 
-def search_wikidata_entities(query: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """Search Wikidata for entities matching the query."""
+def search_wikidata_entities(query: str, limit: int = 10, entity_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Search Wikidata for entities matching the query.
+    
+    Args:
+        query: Search query string
+        limit: Maximum number of results to return
+        entity_type: Optional entity type filter (e.g., "item")
+    
+    Returns:
+        List of search result dictionaries
+    """
     params = {
         "action": "wbsearchentities",
         "search": query,
@@ -37,77 +50,148 @@ def search_wikidata_entities(query: str, limit: int = 10) -> List[Dict[str, Any]
         "format": "json",
         "limit": limit,
     }
+    if entity_type:
+        params["type"] = entity_type
     
     try:
+        logger.debug("[wikidata] search -> url=%s params=%s", WIKIDATA_API_URL, params)
         response = requests.get(WIKIDATA_API_URL, params=params, timeout=10)
+        logger.debug("[wikidata] response status=%s", response.status_code)
         response.raise_for_status()
         data = response.json()
         
         if config.wikidata_log_body:
             _log_body(response.text, "search_response")
         
+        logger.debug("[wikidata] response keys=%s", list(data.keys()) if isinstance(data, dict) else None)
         entities = data.get("search", [])
         return entities
     except Exception as e:
-        logger.error(f"Error searching Wikidata: {e}")
+        logger.exception("[wikidata] search error: %s", e)
         return []
 
 
-def get_wikidata_entity(qid: str) -> Optional[Dict[str, Any]]:
-    """Get full entity data from Wikidata by QID."""
-    params = {
-        "action": "wbgetentities",
-        "ids": qid,
-        "props": "labels|descriptions|claims|sitelinks",
-        "languages": "en",
-        "format": "json",
-    }
+def get_wikidata_entity(qid: str, use_entity_data: bool = False) -> Optional[Dict[str, Any]]:
+    """Get full entity data from Wikidata by QID.
     
-    try:
-        response = requests.get(WIKIDATA_API_URL, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        if config.wikidata_log_body:
-            _log_body(response.text, "entity_response")
-        
-        entities = data.get("entities", {})
-        return entities.get(qid)
-    except Exception as e:
-        logger.error(f"Error fetching Wikidata entity {qid}: {e}")
+    Args:
+        qid: Wikidata entity QID (e.g., "Q123")
+        use_entity_data: If True, use EntityData endpoint; otherwise use API endpoint
+    
+    Returns:
+        Entity dictionary or None if not found
+    """
+    if not qid:
         return None
+    
+    if use_entity_data:
+        # Use EntityData JSON endpoint (alternative method)
+        entity_url = getattr(config, "wikidata_api", {}).get("entity_url", "https://www.wikidata.org/wiki/Special:EntityData/")
+        try:
+            url = f"{entity_url}{qid}.json"
+            logger.debug("[wikidata] fetch entity -> url=%s", url)
+            response = requests.get(url, timeout=10)
+            logger.debug("[wikidata] entity response status=%s", response.status_code)
+            response.raise_for_status()
+            
+            if config.wikidata_log_body:
+                try:
+                    text = response.text
+                    logger.debug("[wikidata] entity response body (truncated): %s", text[:config.data_log_body_max])
+                except Exception:
+                    logger.debug("[wikidata] entity response body not available as text")
+            
+            data = response.json()
+            logger.debug("[wikidata] entity keys=%s", list(data.keys()) if isinstance(data, dict) else None)
+            return data.get("entities", {}).get(qid)
+        except Exception as e:
+            logger.exception("[wikidata] fetch entity error for %s: %s", qid, e)
+            # Fallback to API endpoint
+            return get_wikidata_entity(qid, use_entity_data=False)
+    else:
+        # Use API endpoint (default, more reliable)
+        params = {
+            "action": "wbgetentities",
+            "ids": qid,
+            "props": "labels|descriptions|claims|sitelinks",
+            "languages": "en",
+            "format": "json",
+        }
+        
+        try:
+            logger.debug("[wikidata] fetch entity -> url=%s params=%s", WIKIDATA_API_URL, params)
+            response = requests.get(WIKIDATA_API_URL, params=params, timeout=10)
+            logger.debug("[wikidata] entity response status=%s", response.status_code)
+            response.raise_for_status()
+            data = response.json()
+            
+            if config.wikidata_log_body:
+                _log_body(response.text, "entity_response")
+            
+            logger.debug("[wikidata] entity keys=%s", list(data.keys()) if isinstance(data, dict) else None)
+            entities = data.get("entities", {})
+            return entities.get(qid)
+        except Exception as e:
+            logger.exception("[wikidata] fetch entity error for %s: %s", qid, e)
+            return None
 
 
-def _get_label(entity: Dict[str, Any], lang: str = "en") -> str:
-    """Extract label from Wikidata entity."""
+def _get_label(entity: Dict[str, Any], lang: str = "en", fallback: Optional[Dict[str, Any]] = None) -> str:
+    """Extract label from Wikidata entity with fallback support."""
     labels = entity.get("labels", {})
-    return labels.get(lang, {}).get("value", "")
+    label = labels.get(lang, {}).get("value", "")
+    
+    # Fallback to search hit if provided
+    if not label and fallback:
+        label = fallback.get("label", "")
+    
+    return label or entity.get("id", "")
 
 
-def _get_description(entity: Dict[str, Any], lang: str = "en") -> str:
-    """Extract description from Wikidata entity."""
+def _get_description(entity: Dict[str, Any], lang: str = "en", fallback: Optional[Dict[str, Any]] = None) -> str:
+    """Extract description from Wikidata entity with fallback support."""
     descriptions = entity.get("descriptions", {})
-    return descriptions.get(lang, {}).get("value", "")
+    desc = descriptions.get(lang, {}).get("value", "")
+    
+    # Fallback to search hit if provided
+    if not desc and fallback:
+        desc = fallback.get("description", "")
+    
+    return desc
 
 
 def _get_claim_value(claims: Dict[str, Any], prop: str) -> Optional[Any]:
     """Extract value from Wikidata claims."""
-    if prop not in claims:
+    if prop not in claims or not claims[prop]:
         return None
-    mainsnak = claims[prop][0].get("mainsnak", {})
-    if mainsnak.get("snaktype") != "value":
+    try:
+        mainsnak = claims[prop][0].get("mainsnak", {})
+        if mainsnak.get("snaktype") != "value":
+            return None
+        datavalue = mainsnak.get("datavalue", {})
+        return datavalue.get("value")
+    except (KeyError, IndexError, TypeError):
         return None
-    datavalue = mainsnak.get("datavalue", {})
-    return datavalue.get("value")
 
 
 def _parse_wikidata_date(date_value: Dict[str, Any]) -> Optional[str]:
-    """Parse Wikidata time value to ISO date string."""
+    """Parse Wikidata time value to ISO date string.
+    
+    Handles both API format (dict with 'time' key) and EntityData format (direct string).
+    """
     if not date_value:
         return None
-    time_str = date_value.get("time", "")
+    
+    # Handle EntityData format (direct string)
+    if isinstance(date_value, str):
+        time_str = date_value
+    else:
+        # Handle API format (dict with 'time' key)
+        time_str = date_value.get("time", "")
+    
     if not time_str:
         return None
+    
     # Wikidata dates are like "+1769-08-15T00:00:00Z"
     # Remove the + and T00:00:00Z part
     if time_str.startswith("+"):
@@ -117,11 +201,11 @@ def _parse_wikidata_date(date_value: Dict[str, Any]) -> Optional[str]:
     return time_str
 
 
-def wikidata_to_event(entity: Dict[str, Any], qid: str) -> Optional[Event]:
+def wikidata_to_event(entity: Dict[str, Any], qid: str, search_hit: Optional[Dict[str, Any]] = None) -> Optional[Event]:
     """Convert Wikidata entity to Event model."""
     try:
-        title = _get_label(entity)
-        description = _get_description(entity) or title
+        title = _get_label(entity, fallback=search_hit)
+        description = _get_description(entity, fallback=search_hit) or title
         
         claims = entity.get("claims", {})
         
@@ -158,36 +242,40 @@ def wikidata_to_event(entity: Dict[str, Any], qid: str) -> Optional[Event]:
         locations = []
         location_claims = claims.get("P276", [])
         for loc_claim in location_claims[:1]:  # Take first location
-            loc_entity = loc_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(loc_entity, dict):
-                loc_qid = loc_entity.get("id", "")
-                loc_entity_data = get_wikidata_entity(loc_qid)
-                if loc_entity_data:
-                    loc_name = _get_label(loc_entity_data)
-                    # Try to get coordinates
-                    loc_coords = loc_entity_data.get("claims", {}).get("P625", [])
-                    lat, lon = None, None
-                    if loc_coords:
-                        coord_val = loc_coords[0].get("mainsnak", {}).get("datavalue", {}).get("value", {})
-                        if isinstance(coord_val, dict):
-                            lat = coord_val.get("latitude")
-                            lon = coord_val.get("longitude")
-                    
-                    locations.append(GeographicReference(
-                        geography_id=f"geo_{loc_qid}",
-                        name=loc_name,
-                        latitude=lat,
-                        longitude=lon
-                    ))
+            try:
+                loc_entity = loc_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(loc_entity, dict):
+                    loc_qid = loc_entity.get("id", "")
+                    loc_entity_data = get_wikidata_entity(loc_qid)
+                    if loc_entity_data:
+                        loc_name = _get_label(loc_entity_data)
+                        # Try to get coordinates
+                        loc_coords = loc_entity_data.get("claims", {}).get("P625", [])
+                        lat, lon = None, None
+                        if loc_coords:
+                            coord_val = loc_coords[0].get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                            if isinstance(coord_val, dict):
+                                lat = coord_val.get("latitude")
+                                lon = coord_val.get("longitude")
+                        
+                        locations.append(GeographicReference(
+                            geography_id=f"geo_{loc_qid}",
+                            name=loc_name,
+                            latitude=lat,
+                            longitude=lon
+                        ))
+            except (KeyError, IndexError, TypeError):
+                continue
         
         # Create source attribution
+        entity_url = getattr(config, "wikidata_api", {}).get("entity_url", "https://www.wikidata.org/wiki/")
         source = SourceAttribution(
             source_id="wikipedia",
             source_name="Wikipedia",
             trust_level=0.7,
             fields_contributed=["title", "description", "start_date", "locations"],
             external_id=qid,
-            url=f"https://www.wikidata.org/wiki/{qid}"
+            url=f"{entity_url}{qid}" if entity_url.endswith("/") else f"{entity_url}/{qid}"
         )
         
         event = Event(
@@ -209,11 +297,11 @@ def wikidata_to_event(entity: Dict[str, Any], qid: str) -> Optional[Event]:
         return None
 
 
-def wikidata_to_person(entity: Dict[str, Any], qid: str) -> Optional[Person]:
+def wikidata_to_person(entity: Dict[str, Any], qid: str, search_hit: Optional[Dict[str, Any]] = None) -> Optional[Person]:
     """Convert Wikidata entity to Person model."""
     try:
-        name = _get_label(entity)
-        description = _get_description(entity) or name
+        name = _get_label(entity, fallback=search_hit)
+        description = _get_description(entity, fallback=search_hit) or name
         
         claims = entity.get("claims", {})
         
@@ -233,36 +321,43 @@ def wikidata_to_person(entity: Dict[str, Any], qid: str) -> Optional[Person]:
         occupations = []
         occ_claims = claims.get("P106", [])
         for occ_claim in occ_claims[:5]:  # Limit to 5
-            occ_entity = occ_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(occ_entity, dict):
-                occ_qid = occ_entity.get("id", "")
-                occ_entity_data = get_wikidata_entity(occ_qid)
-                if occ_entity_data:
-                    occ_name = _get_label(occ_entity_data)
-                    if occ_name:
-                        occupations.append(occ_name)
+            try:
+                occ_entity = occ_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(occ_entity, dict):
+                    occ_qid = occ_entity.get("id", "")
+                    occ_entity_data = get_wikidata_entity(occ_qid)
+                    if occ_entity_data:
+                        occ_name = _get_label(occ_entity_data)
+                        if occ_name:
+                            occupations.append(occ_name)
+            except (KeyError, IndexError, TypeError):
+                continue
         
         # Get nationality (P27: country of citizenship)
         nationalities = []
         nat_claims = claims.get("P27", [])
         for nat_claim in nat_claims[:3]:  # Limit to 3
-            nat_entity = nat_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(nat_entity, dict):
-                nat_qid = nat_entity.get("id", "")
-                nat_entity_data = get_wikidata_entity(nat_qid)
-                if nat_entity_data:
-                    nat_name = _get_label(nat_entity_data)
-                    if nat_name:
-                        nationalities.append(nat_name)
+            try:
+                nat_entity = nat_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(nat_entity, dict):
+                    nat_qid = nat_entity.get("id", "")
+                    nat_entity_data = get_wikidata_entity(nat_qid)
+                    if nat_entity_data:
+                        nat_name = _get_label(nat_entity_data)
+                        if nat_name:
+                            nationalities.append(nat_name)
+            except (KeyError, IndexError, TypeError):
+                continue
         
         # Create source attribution
+        entity_url = getattr(config, "wikidata_api", {}).get("entity_url", "https://www.wikidata.org/wiki/")
         source = SourceAttribution(
             source_id="wikipedia",
             source_name="Wikipedia",
             trust_level=0.7,
             fields_contributed=["name", "description", "birth_date", "death_date", "occupations", "nationalities"],
             external_id=qid,
-            url=f"https://www.wikidata.org/wiki/{qid}"
+            url=f"{entity_url}{qid}" if entity_url.endswith("/") else f"{entity_url}/{qid}"
         )
         
         person = Person(
@@ -285,11 +380,11 @@ def wikidata_to_person(entity: Dict[str, Any], qid: str) -> Optional[Person]:
         return None
 
 
-def wikidata_to_geography(entity: Dict[str, Any], qid: str) -> Optional[Geography]:
+def wikidata_to_geography(entity: Dict[str, Any], qid: str, search_hit: Optional[Dict[str, Any]] = None) -> Optional[Geography]:
     """Convert Wikidata entity to Geography model."""
     try:
-        name = _get_label(entity)
-        description = _get_description(entity) or name
+        name = _get_label(entity, fallback=search_hit)
+        description = _get_description(entity, fallback=search_hit) or name
         
         claims = entity.get("claims", {})
         
@@ -297,37 +392,44 @@ def wikidata_to_geography(entity: Dict[str, Any], qid: str) -> Optional[Geograph
         center_coordinate = None
         coord_claims = claims.get("P625", [])
         if coord_claims:
-            coord_val = coord_claims[0].get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(coord_val, dict):
-                lat = coord_val.get("latitude")
-                lon = coord_val.get("longitude")
-                if lat is not None and lon is not None:
-                    center_coordinate = Coordinate(latitude=lat, longitude=lon)
+            try:
+                coord_val = coord_claims[0].get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(coord_val, dict):
+                    lat = coord_val.get("latitude")
+                    lon = coord_val.get("longitude")
+                    if lat is not None and lon is not None:
+                        center_coordinate = Coordinate(latitude=lat, longitude=lon)
+            except (KeyError, IndexError, TypeError):
+                pass
         
         # Determine geography type (P31: instance of)
         geography_type = GeographyType.OTHER  # Default
         instance_claims = claims.get("P31", [])
         for inst_claim in instance_claims:
-            inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(inst_entity, dict):
-                inst_qid = inst_entity.get("id", "")
-                # Map common Wikidata types to our GeographyType
-                if inst_qid in ["Q6256"]:  # country
-                    geography_type = GeographyType.COUNTRY
-                elif inst_qid in ["Q515", "Q15284"]:  # city, settlement
-                    geography_type = GeographyType.CITY
-                elif inst_qid in ["Q5107"]:  # continent
-                    geography_type = GeographyType.CONTINENT
-                break
+            try:
+                inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(inst_entity, dict):
+                    inst_qid = inst_entity.get("id", "")
+                    # Map common Wikidata types to our GeographyType
+                    if inst_qid in ["Q6256"]:  # country
+                        geography_type = GeographyType.COUNTRY
+                    elif inst_qid in ["Q515", "Q15284"]:  # city, settlement
+                        geography_type = GeographyType.CITY
+                    elif inst_qid in ["Q5107"]:  # continent
+                        geography_type = GeographyType.CONTINENT
+                    break
+            except (KeyError, IndexError, TypeError):
+                continue
         
         # Create source attribution
+        entity_url = getattr(config, "wikidata_api", {}).get("entity_url", "https://www.wikidata.org/wiki/")
         source = SourceAttribution(
             source_id="wikipedia",
             source_name="Wikipedia",
             trust_level=0.7,
             fields_contributed=["name", "description", "center_coordinate", "geography_type"],
             external_id=qid,
-            url=f"https://www.wikidata.org/wiki/{qid}"
+            url=f"{entity_url}{qid}" if entity_url.endswith("/") else f"{entity_url}/{qid}"
         )
         
         geography = Geography(
@@ -355,7 +457,8 @@ def search_wikidata_events(query: str, limit: int = 10) -> List[Event]:
     
     for entity in entities:
         qid = entity.get("id", "")
-        entity_type = entity.get("concepturi", "").split("/")[-1] if entity.get("concepturi") else ""
+        if not qid:
+            continue
         
         # Get full entity data
         full_entity = get_wikidata_entity(qid)
@@ -367,20 +470,23 @@ def search_wikidata_events(query: str, limit: int = 10) -> List[Event]:
         instance_claims = claims.get("P31", [])
         is_event = False
         for inst_claim in instance_claims:
-            inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(inst_entity, dict):
-                inst_qid = inst_entity.get("id", "")
-                if inst_qid in ["Q1656682", "Q1190554", "Q1983062"]:  # event, occurrence, historical event
-                    is_event = True
-                    break
+            try:
+                inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(inst_entity, dict):
+                    inst_qid = inst_entity.get("id", "")
+                    if inst_qid in ["Q1656682", "Q1190554", "Q1983062"]:  # event, occurrence, historical event
+                        is_event = True
+                        break
+            except (KeyError, IndexError, TypeError):
+                continue
         
         if is_event:
-            event = wikidata_to_event(full_entity, qid)
+            event = wikidata_to_event(full_entity, qid, search_hit=entity)
             if event:
                 events.append(event)
         else:
-            # Try to convert anyway if query matches
-            event = wikidata_to_event(full_entity, qid)
+            # Try to convert anyway if query matches (fallback)
+            event = wikidata_to_event(full_entity, qid, search_hit=entity)
             if event:
                 events.append(event)
     
@@ -394,6 +500,8 @@ def search_wikidata_people(query: str, limit: int = 10) -> List[Person]:
     
     for entity in entities:
         qid = entity.get("id", "")
+        if not qid:
+            continue
         
         # Get full entity data
         full_entity = get_wikidata_entity(qid)
@@ -405,15 +513,18 @@ def search_wikidata_people(query: str, limit: int = 10) -> List[Person]:
         instance_claims = claims.get("P31", [])
         is_person = False
         for inst_claim in instance_claims:
-            inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(inst_entity, dict):
-                inst_qid = inst_entity.get("id", "")
-                if inst_qid == "Q5":  # human
-                    is_person = True
-                    break
+            try:
+                inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(inst_entity, dict):
+                    inst_qid = inst_entity.get("id", "")
+                    if inst_qid == "Q5":  # human
+                        is_person = True
+                        break
+            except (KeyError, IndexError, TypeError):
+                continue
         
         if is_person:
-            person = wikidata_to_person(full_entity, qid)
+            person = wikidata_to_person(full_entity, qid, search_hit=entity)
             if person:
                 people.append(person)
     
@@ -427,6 +538,8 @@ def search_wikidata_geographies(query: str, limit: int = 10) -> List[Geography]:
     
     for entity in entities:
         qid = entity.get("id", "")
+        if not qid:
+            continue
         
         # Get full entity data
         full_entity = get_wikidata_entity(qid)
@@ -440,17 +553,88 @@ def search_wikidata_geographies(query: str, limit: int = 10) -> List[Geography]:
         is_geo = False
         
         for inst_claim in instance_claims:
-            inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-            if isinstance(inst_entity, dict):
-                inst_qid = inst_entity.get("id", "")
-                # Common geographic types
-                if inst_qid in ["Q6256", "Q515", "Q5107", "Q15284", "Q23442"]:  # country, city, continent, settlement, administrative territorial entity
-                    is_geo = True
-                    break
+            try:
+                inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(inst_entity, dict):
+                    inst_qid = inst_entity.get("id", "")
+                    # Common geographic types
+                    if inst_qid in ["Q6256", "Q515", "Q5107", "Q15284", "Q23442"]:  # country, city, continent, settlement, administrative territorial entity
+                        is_geo = True
+                        break
+            except (KeyError, IndexError, TypeError):
+                continue
         
         if is_geo or has_coords:
-            geography = wikidata_to_geography(full_entity, qid)
+            geography = wikidata_to_geography(full_entity, qid, search_hit=entity)
             if geography:
                 geographies.append(geography)
     
     return geographies
+
+
+# Repository class for repository pattern support
+class WikidataRepository:
+    """Repository class for Wikidata-backed searches.
+    
+    This implements a repository pattern interface that wraps the utility functions,
+    providing compatibility with repository-based code while using the comprehensive
+    conversion functions from this module.
+    """
+    
+    def __init__(self, base_url: Optional[str] = None, entity_url: Optional[str] = None, limit: int = 10, use_entity_data: bool = False):
+        """Initialize Wikidata repository.
+        
+        Args:
+            base_url: Wikidata API base URL (defaults to standard API URL)
+            entity_url: EntityData URL for alternative endpoint (optional)
+            limit: Default limit for searches
+            use_entity_data: If True, prefer EntityData endpoint over API endpoint
+        """
+        self.base_url = base_url or WIKIDATA_API_URL
+        self.entity_url = entity_url or getattr(config, "wikidata_api", {}).get("entity_url", "https://www.wikidata.org/wiki/Special:EntityData/")
+        self.limit = limit
+        self.use_entity_data = use_entity_data
+    
+    def search_people(self, text: Optional[str] = None, related_event_id: Optional[str] = None) -> List[Person]:
+        """Search for people in Wikidata."""
+        if not text:
+            return []
+        return search_wikidata_people(text, limit=self.limit)
+    
+    def search_geographies(
+        self,
+        text: Optional[str] = None,
+        center_coord: Optional[Tuple[float, float]] = None,
+        within_km: Optional[float] = None
+    ) -> List[Geography]:
+        """Search for geographies in Wikidata.
+        
+        Note: center_coord and within_km filtering not yet implemented for Wikidata.
+        """
+        if not text:
+            return []
+        return search_wikidata_geographies(text, limit=self.limit)
+    
+    def search_events(
+        self,
+        text: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        geography_id: Optional[str] = None,
+        center_coord: Optional[Tuple[float, float]] = None,
+        within_km: Optional[float] = None
+    ) -> List[Event]:
+        """Search for events in Wikidata.
+        
+        Note: Date and location filtering not yet implemented for Wikidata.
+        """
+        if not text:
+            return []
+        return search_wikidata_events(text, limit=self.limit)
+    
+    def pivot(self, from_dim: str, to_dim: str, id_value: str):
+        """Pivot operations are not supported against Wikidata in this implementation.
+        
+        Returns empty list.
+        """
+        return []
