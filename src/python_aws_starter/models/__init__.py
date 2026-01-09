@@ -8,6 +8,22 @@ from .geography import Geography, GeographicReference
 from .dimensions import Dimension
 from .validation import DataQuality
 from .contributions import UserContribution
+from .wikidata_meta import (
+    Claim,
+    Statement,
+    Snak,
+    Datavalue,
+    DatavalueType,
+    SnakType,
+    TimeValue,
+    QuantityValue,
+    GlobeCoordinate,
+    MonolingualText,
+    WikibaseEntityId,
+    Reference,
+    Qualifier,
+    WikibaseEntity,
+)
 
 __all__ = [
     "BaseEntity",
@@ -20,4 +36,19 @@ __all__ = [
     "Dimension",
     "DataQuality",
     "UserContribution",
+    # Wikidata meta model
+    "Claim",
+    "Statement",
+    "Snak",
+    "Datavalue",
+    "DatavalueType",
+    "SnakType",
+    "TimeValue",
+    "QuantityValue",
+    "GlobeCoordinate",
+    "MonolingualText",
+    "WikibaseEntityId",
+    "Reference",
+    "Qualifier",
+    "WikibaseEntity",
 ]

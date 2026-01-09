@@ -7,18 +7,25 @@ Wikidata and converting results to the project's domain models.
 import logging
 from typing import List, Optional, Dict, Any, Tuple
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 
 from python_aws_starter.config import config
 from python_aws_starter.models.events import Event, DateRange, GeographicReference, PersonReference
 from python_aws_starter.models.people import Person
 from python_aws_starter.models.geography import Geography, GeographyType, Coordinate
 from python_aws_starter.models.sources import SourceAttribution, SourceType
+from python_aws_starter.models.wikidata_meta import (
+    Claim, Snak, Datavalue, DatavalueType, SnakType,
+    TimeValue, GlobeCoordinate, WikibaseEntityId, Qualifier, Reference
+)
 
 logger = logging.getLogger(__name__)
 
 WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php"
 WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
+
+# User-Agent header required by Wikidata API
+WIKIDATA_USER_AGENT = "python-aws-starter/0.1.0 (https://github.com/mrjohnskelton/python-aws-starter; contact via GitHub)"
 
 
 def _log_body(body: str, operation: str = "request") -> None:
@@ -54,8 +61,9 @@ def search_wikidata_entities(query: str, limit: int = 10, entity_type: Optional[
         params["type"] = entity_type
     
     try:
+        headers = {"User-Agent": WIKIDATA_USER_AGENT}
         logger.debug("[wikidata] search -> url=%s params=%s", WIKIDATA_API_URL, params)
-        response = requests.get(WIKIDATA_API_URL, params=params, timeout=10)
+        response = requests.get(WIKIDATA_API_URL, params=params, headers=headers, timeout=10)
         logger.debug("[wikidata] response status=%s", response.status_code)
         response.raise_for_status()
         data = response.json()
@@ -89,8 +97,9 @@ def get_wikidata_entity(qid: str, use_entity_data: bool = False) -> Optional[Dic
         entity_url = getattr(config, "wikidata_api", {}).get("entity_url", "https://www.wikidata.org/wiki/Special:EntityData/")
         try:
             url = f"{entity_url}{qid}.json"
+            headers = {"User-Agent": WIKIDATA_USER_AGENT}
             logger.debug("[wikidata] fetch entity -> url=%s", url)
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10)
             logger.debug("[wikidata] entity response status=%s", response.status_code)
             response.raise_for_status()
             
@@ -119,8 +128,9 @@ def get_wikidata_entity(qid: str, use_entity_data: bool = False) -> Optional[Dic
         }
         
         try:
+            headers = {"User-Agent": WIKIDATA_USER_AGENT}
             logger.debug("[wikidata] fetch entity -> url=%s params=%s", WIKIDATA_API_URL, params)
-            response = requests.get(WIKIDATA_API_URL, params=params, timeout=10)
+            response = requests.get(WIKIDATA_API_URL, params=params, headers=headers, timeout=10)
             logger.debug("[wikidata] entity response status=%s", response.status_code)
             response.raise_for_status()
             data = response.json()
@@ -201,6 +211,127 @@ def _parse_wikidata_date(date_value: Dict[str, Any]) -> Optional[str]:
     return time_str
 
 
+def _convert_wikidata_claim_to_claim(wikidata_claim: Dict[str, Any]) -> Optional[Claim]:
+    """Convert a raw Wikidata claim dictionary to our Claim model."""
+    try:
+        mainsnak_data = wikidata_claim.get("mainsnak", {})
+        if not mainsnak_data:
+            return None
+        
+        snaktype = SnakType(mainsnak_data.get("snaktype", "value"))
+        property_id = mainsnak_data.get("property", "")
+        
+        # Convert datavalue
+        datavalue = None
+        if snaktype == SnakType.VALUE and "datavalue" in mainsnak_data:
+            wd_datavalue = mainsnak_data["datavalue"]
+            value_type = wd_datavalue.get("type", "")
+            value_data = wd_datavalue.get("value", {})
+            
+            if value_type == "time":
+                time_value = TimeValue(
+                    time=value_data.get("time", ""),
+                    timezone=value_data.get("timezone", 0),
+                    before=value_data.get("before", 0),
+                    after=value_data.get("after", 0),
+                    precision=value_data.get("precision", 11),
+                    calendarmodel=value_data.get("calendarmodel", "http://www.wikidata.org/entity/Q1985727")
+                )
+                datavalue = Datavalue(type=DatavalueType.TIME, value=time_value)
+            elif value_type == "wikibase-entityid":
+                entity_value = WikibaseEntityId(
+                    id=value_data.get("id", ""),
+                    entity_type=value_data.get("entity-type", "item")
+                )
+                datavalue = Datavalue(type=DatavalueType.WIKIBASE_ENTITY, value=entity_value)
+            elif value_type == "globecoordinate":
+                coord_value = GlobeCoordinate(
+                    latitude=value_data.get("latitude", 0),
+                    longitude=value_data.get("longitude", 0),
+                    precision=value_data.get("precision"),
+                    globe=value_data.get("globe", "http://www.wikidata.org/entity/Q2")
+                )
+                datavalue = Datavalue(type=DatavalueType.GLOBE_COORDINATE, value=coord_value)
+            elif value_type == "string":
+                datavalue = Datavalue(type=DatavalueType.STRING, value=value_data)
+            else:
+                # Fallback: store as dict
+                datavalue = Datavalue(type=DatavalueType(value_type) if hasattr(DatavalueType, value_type.upper().replace("-", "_")) else DatavalueType.STRING, value=value_data)
+        
+        snak = Snak(
+            snaktype=snaktype,
+            property=property_id,
+            datavalue=datavalue,
+            datatype=mainsnak_data.get("datatype")
+        )
+        
+        # Convert qualifiers
+        qualifiers = None
+        qualifiers_order = None
+        if "qualifiers" in wikidata_claim:
+            qualifiers = {}
+            qualifiers_order = []
+            for prop, qual_list in wikidata_claim["qualifiers"].items():
+                qualifiers[prop] = []
+                for qual_data in qual_list:
+                    qual_snaktype = SnakType(qual_data.get("snaktype", "value"))
+                    qual_datavalue = None
+                    if qual_snaktype == SnakType.VALUE and "datavalue" in qual_data:
+                        # Similar conversion as above (simplified)
+                        qual_datavalue = Datavalue(type=DatavalueType.STRING, value=qual_data["datavalue"].get("value", {}))
+                    qualifiers[prop].append(Qualifier(
+                        property=prop,
+                        snaktype=qual_snaktype,
+                        datavalue=qual_datavalue
+                    ))
+                qualifiers_order.append(prop)
+        
+        # Convert references (simplified)
+        references = None
+        if "references" in wikidata_claim:
+            references = []
+            for ref_data in wikidata_claim["references"]:
+                ref_snaks = {}
+                for prop, snak_list in ref_data.get("snaks", {}).items():
+                    ref_snaks[prop] = []
+                    for snak_data in snak_list:
+                        ref_snak = Snak(
+                            snaktype=SnakType(snak_data.get("snaktype", "value")),
+                            property=prop,
+                            datavalue=None  # Simplified
+                        )
+                        ref_snaks[prop].append(ref_snak)
+                references.append(Reference(
+                    snaks=ref_snaks,
+                    snaks_order=ref_data.get("snaks-order", [])
+                ))
+        
+        return Claim(
+            id=wikidata_claim.get("id"),
+            mainsnak=snak,
+            type=wikidata_claim.get("type", "statement"),
+            rank=wikidata_claim.get("rank", "normal"),
+            qualifiers=qualifiers,
+            qualifiers_order=qualifiers_order,
+            references=references
+        )
+    except Exception as e:
+        logger.error(f"Error converting Wikidata claim: {e}")
+        return None
+
+
+def _convert_wikidata_claims(wikidata_claims: Dict[str, List[Dict[str, Any]]]) -> Dict[str, List[Claim]]:
+    """Convert a dictionary of Wikidata claims to our Claim models."""
+    converted = {}
+    for property_id, claim_list in wikidata_claims.items():
+        converted[property_id] = []
+        for claim_data in claim_list:
+            claim = _convert_wikidata_claim_to_claim(claim_data)
+            if claim:
+                converted[property_id].append(claim)
+    return converted
+
+
 def wikidata_to_event(entity: Dict[str, Any], qid: str, search_hit: Optional[Dict[str, Any]] = None) -> Optional[Event]:
     """Convert Wikidata entity to Event model."""
     try:
@@ -278,6 +409,19 @@ def wikidata_to_event(entity: Dict[str, Any], qid: str, search_hit: Optional[Dic
             url=f"{entity_url}{qid}" if entity_url.endswith("/") else f"{entity_url}/{qid}"
         )
         
+        now = datetime.now(timezone.utc)
+        
+        # Convert Wikidata claims to our Claim models
+        converted_claims = _convert_wikidata_claims(claims)
+        
+        # Get labels and descriptions
+        labels = {}
+        descriptions = {}
+        for lang, label_data in entity.get("labels", {}).items():
+            labels[lang] = {"language": lang, "value": label_data.get("value", "")}
+        for lang, desc_data in entity.get("descriptions", {}).items():
+            descriptions[lang] = {"language": lang, "value": desc_data.get("value", "")}
+        
         event = Event(
             id=f"event_wikidata_{qid}",
             title=title,
@@ -287,8 +431,13 @@ def wikidata_to_event(entity: Dict[str, Any], qid: str, search_hit: Optional[Dic
             locations=locations,
             sources=[source],
             confidence=0.7,
-            created_at=datetime.now(),
-            created_by="wikidata"
+            created_at=now,
+            created_by="wikidata",
+            last_modified_at=now,
+            last_modified_by="wikidata",
+            claims=converted_claims,
+            labels=labels,
+            descriptions=descriptions
         )
         
         return event
@@ -360,6 +509,19 @@ def wikidata_to_person(entity: Dict[str, Any], qid: str, search_hit: Optional[Di
             url=f"{entity_url}{qid}" if entity_url.endswith("/") else f"{entity_url}/{qid}"
         )
         
+        now = datetime.now(timezone.utc)
+        
+        # Convert Wikidata claims to our Claim models
+        converted_claims = _convert_wikidata_claims(claims)
+        
+        # Get labels and descriptions
+        labels = {}
+        descriptions = {}
+        for lang, label_data in entity.get("labels", {}).items():
+            labels[lang] = {"language": lang, "value": label_data.get("value", "")}
+        for lang, desc_data in entity.get("descriptions", {}).items():
+            descriptions[lang] = {"language": lang, "value": desc_data.get("value", "")}
+        
         person = Person(
             id=f"person_wikidata_{qid}",
             name=name,
@@ -370,8 +532,13 @@ def wikidata_to_person(entity: Dict[str, Any], qid: str, search_hit: Optional[Di
             nationalities=nationalities,
             sources=[source],
             confidence=0.7,
-            created_at=datetime.now(),
-            created_by="wikidata"
+            created_at=now,
+            created_by="wikidata",
+            last_modified_at=now,
+            last_modified_by="wikidata",
+            claims=converted_claims,
+            labels=labels,
+            descriptions=descriptions
         )
         
         return person
@@ -432,6 +599,19 @@ def wikidata_to_geography(entity: Dict[str, Any], qid: str, search_hit: Optional
             url=f"{entity_url}{qid}" if entity_url.endswith("/") else f"{entity_url}/{qid}"
         )
         
+        now = datetime.now(timezone.utc)
+        
+        # Convert Wikidata claims to our Claim models
+        converted_claims = _convert_wikidata_claims(claims)
+        
+        # Get labels and descriptions
+        labels = {}
+        descriptions = {}
+        for lang, label_data in entity.get("labels", {}).items():
+            labels[lang] = {"language": lang, "value": label_data.get("value", "")}
+        for lang, desc_data in entity.get("descriptions", {}).items():
+            descriptions[lang] = {"language": lang, "value": desc_data.get("value", "")}
+        
         geography = Geography(
             id=f"geo_wikidata_{qid}",
             name=name,
@@ -440,8 +620,13 @@ def wikidata_to_geography(entity: Dict[str, Any], qid: str, search_hit: Optional
             center_coordinate=center_coordinate,
             sources=[source],
             confidence=0.7,
-            created_at=datetime.now(),
-            created_by="wikidata"
+            created_at=now,
+            created_by="wikidata",
+            last_modified_at=now,
+            last_modified_by="wikidata",
+            claims=converted_claims,
+            labels=labels,
+            descriptions=descriptions
         )
         
         return geography

@@ -127,3 +127,117 @@ def search_geographies(
     results.extend(local_results)
     
     return [r.model_dump() for r in results]
+
+
+# Claims-based query endpoints
+@app.get("/entity/{entity_id}/claims")
+def get_entity_claims(entity_id: str, property_id: Optional[str] = None):
+    """Get claims for an entity, optionally filtered by property ID.
+    
+    Example: /entity/person_napoleon/claims?property_id=P569
+    """
+    # Try to find entity in local repository
+    entity = None
+    
+    # Check people
+    person = _repo.get_person_by_id(entity_id)
+    if person:
+        entity = person
+    else:
+        # Check events
+        event = _repo.get_event_by_id(entity_id)
+        if event:
+            entity = event
+        else:
+            # Check geographies
+            geo = _repo.get_geo_by_id(entity_id)
+            if geo:
+                entity = geo
+    
+    if not entity:
+        raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+    
+    if property_id:
+        claims = entity.get_claims(property_id)
+        return {"entity_id": entity_id, "property_id": property_id, "claims": [c.model_dump() for c in claims]}
+    else:
+        return {"entity_id": entity_id, "claims": {pid: [c.model_dump() for c in claims] for pid, claims in entity.claims.items()}}
+
+
+@app.get("/entity/{entity_id}/claim/{property_id}")
+def get_entity_claim(entity_id: str, property_id: str):
+    """Get the best claim for a specific property on an entity.
+    
+    Example: /entity/person_napoleon/claim/P569
+    """
+    # Try to find entity in local repository
+    entity = None
+    
+    # Check people
+    person = _repo.get_person_by_id(entity_id)
+    if person:
+        entity = person
+    else:
+        # Check events
+        event = _repo.get_event_by_id(entity_id)
+        if event:
+            entity = event
+        else:
+            # Check geographies
+            geo = _repo.get_geo_by_id(entity_id)
+            if geo:
+                entity = geo
+    
+    if not entity:
+        raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+    
+    claim = entity.get_best_claim(property_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail=f"No claim found for property {property_id} on entity {entity_id}")
+    
+    return {"entity_id": entity_id, "property_id": property_id, "claim": claim.model_dump()}
+
+
+@app.get("/search/by-property")
+def search_by_property(
+    property_id: str = Query(..., description="Property ID to search (e.g., P569 for date of birth)"),
+    value: Optional[str] = Query(None, description="Value to match (optional)"),
+    entity_type: Optional[str] = Query(None, description="Entity type filter: 'person', 'event', or 'geography'"),
+):
+    """Search entities by property value.
+    
+    Example: /search/by-property?property_id=P569&value=1769-08-15
+    """
+    results = []
+    
+    # Search people
+    if not entity_type or entity_type == "person":
+        for person in _repo.list_people():
+            claims = person.get_claims(property_id)
+            if claims:
+                if value:
+                    # TODO: Implement value matching
+                    pass
+                results.append(person)
+    
+    # Search events
+    if not entity_type or entity_type == "event":
+        for event in _repo.list_events():
+            claims = event.get_claims(property_id)
+            if claims:
+                if value:
+                    # TODO: Implement value matching
+                    pass
+                results.append(event)
+    
+    # Search geographies
+    if not entity_type or entity_type == "geography":
+        for geo in _repo.list_geographies():
+            claims = geo.get_claims(property_id)
+            if claims:
+                if value:
+                    # TODO: Implement value matching
+                    pass
+                results.append(geo)
+    
+    return [r.model_dump() for r in results]

@@ -9,6 +9,8 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - DATA_SOURCE=wikidata
+      - LOG_LEVEL=INFO
     container_name: python-aws-starter-demo
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]

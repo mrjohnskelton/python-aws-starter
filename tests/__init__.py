@@ -17,6 +17,10 @@ def sample_event():
         conflict_notes=None,
         created_by="test",
         last_modified_by="test",
+        claims={},
+        labels={},
+        descriptions={},
+        aliases={},
     )
 
 
@@ -37,6 +41,10 @@ def sample_person():
         conflict_notes=None,
         created_by="test",
         last_modified_by="test",
+        claims={},
+        labels={},
+        descriptions={},
+        aliases={},
     )
 
 
@@ -59,4 +67,8 @@ def sample_geography():
         conflict_notes=None,
         created_by="test",
         last_modified_by="test",
+        claims={},
+        labels={},
+        descriptions={},
+        aliases={},
     )

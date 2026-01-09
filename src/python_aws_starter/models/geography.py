@@ -5,6 +5,7 @@ from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
 from .base import BaseEntity
 from .sources import SourceAttribution
+from .claims_utils import Property, extract_coordinate_from_claim, extract_entity_id_from_claim
 
 
 class GeographyType(str, Enum):
@@ -51,25 +52,73 @@ class GeographicReference(BaseModel):
 
 
 class Geography(BaseEntity):
-    """Represents a geographic location or region."""
-
-    name: str = Field(..., description="Current or primary name")
-    geography_type: GeographyType = Field(..., description="Type of geographic entity")
-    alternate_names: List[str] = Field(default_factory=list, description="Alternate or historical names")
+    """Represents a geographic location or region.
     
-    description: str = Field(..., description="Description of the geography")
+    Supports both traditional flat fields and Wikidata-style claims.
+    When claims are present, computed properties read from claims.
+    """
+
+    name: str = Field(..., description="Current or primary name (or use labels from claims)")
+    geography_type: GeographyType = Field(..., description="Type of geographic entity - computed from claims if available")
+    alternate_names: List[str] = Field(default_factory=list, description="Alternate or historical names - from aliases if available")
+    
+    description: str = Field(..., description="Description of the geography - computed from claims if available")
     
     # Current coordinates
-    center_coordinate: Optional[Coordinate] = Field(None, description="Center point of the geography")
+    center_coordinate: Optional[Coordinate] = Field(None, description="Center point - computed from claims (P625) if available")
     boundaries: Optional[dict] = Field(None, description="Geographic boundaries (GeoJSON format)")
     
     # Hierarchical relationships
     parent_geography_id: Optional[str] = Field(
-        None, description="Parent geography (e.g., continent for a country)"
+        None, description="Parent geography - computed from claims if available"
     )
     child_geographies: List[str] = Field(
         default_factory=list, description="List of child geography IDs"
     )
+    
+    def get_computed_name(self) -> str:
+        """Get name from label if available, otherwise use name field."""
+        label = self.get_label()
+        return label if label else self.name
+    
+    def get_computed_description(self) -> str:
+        """Get description from claims if available."""
+        desc = self.get_description()
+        return desc if desc else self.description
+    
+    def get_computed_center_coordinate(self) -> Optional[Coordinate]:
+        """Get coordinates from claims (P625) if available."""
+        claim = self.get_best_claim(Property.COORDINATE_LOCATION)
+        if claim:
+            coords = extract_coordinate_from_claim(claim)
+            if coords:
+                lat, lon = coords
+                return Coordinate(latitude=lat, longitude=lon)
+        return self.center_coordinate
+    
+    def get_computed_alternate_names(self) -> List[str]:
+        """Get alternate names from aliases if available."""
+        aliases = []
+        for lang_aliases in self.aliases.values():
+            for alias in lang_aliases:
+                if isinstance(alias, dict) and "value" in alias:
+                    aliases.append(alias["value"])
+        return aliases if aliases else self.alternate_names
+    
+    def get_geography_type_from_claims(self) -> GeographyType:
+        """Get geography type from claims (P31: instance of)."""
+        instance_claims = self.get_claims(Property.INSTANCE_OF)
+        for claim in instance_claims:
+            entity_id = extract_entity_id_from_claim(claim)
+            if entity_id:
+                # Map common Wikidata types to GeographyType
+                if entity_id == "Q6256":  # country
+                    return GeographyType.COUNTRY
+                elif entity_id in ["Q515", "Q15284"]:  # city, settlement
+                    return GeographyType.CITY
+                elif entity_id == "Q5107":  # continent
+                    return GeographyType.CONTINENT
+        return self.geography_type
     
     # Temporal variations
     temporal_variants: List[TemporalGeography] = Field(

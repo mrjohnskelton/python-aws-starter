@@ -2,22 +2,21 @@
 
 This file provides sample DataSource, Geography, Person and Event instances
 that are interlinked to facilitate pivoting between dimensions.
+Now includes Wikidata-style claims structure.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from python_aws_starter.models.sources import DataSource, SourceType, SourceAttribution
 from python_aws_starter.models.geography import Geography, GeographyType, Coordinate, TemporalGeography
 from python_aws_starter.models.people import Person, OrganizationReference, PersonReference
 from python_aws_starter.models.events import Event, DateRange, GeographicReference, PersonReference as EventPersonRef
-"""Sample dataset for testing cross-dimensional pivots.
-
-Provides sample DataSource, Geography, Person and Event instances
-that are interlinked to facilitate pivoting between dimensions.
-"""
-from python_aws_starter.models.sources import DataSource, SourceType, SourceAttribution
-from python_aws_starter.models.geography import Geography, GeographyType, Coordinate
-from python_aws_starter.models.people import Person
-from python_aws_starter.models.events import Event, DateRange, GeographicReference, PersonReference as EventPersonRef
 from python_aws_starter.models.dimensions import Dimension, DimensionType, DimensionField
+from python_aws_starter.models.claims_utils import (
+    Property,
+    create_time_claim,
+    create_entity_claim,
+    create_coordinate_claim,
+    create_string_claim,
+)
 
 # Data sources
 DATA_SOURCES = [
@@ -50,7 +49,7 @@ DATA_SOURCES = [
     ),
 ]
 
-# Geographies (examples)
+# Geographies (examples) - now with claims
 GEOGRAPHIES = [
     Geography(
         id="geo_europe",
@@ -60,6 +59,12 @@ GEOGRAPHIES = [
         center_coordinate=Coordinate(latitude=54.5260, longitude=15.2551, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "Europe"}},
+        descriptions={"en": {"language": "en", "value": "Continent of Europe"}},
+        claims={
+            Property.COORDINATE_LOCATION: [create_coordinate_claim(Property.COORDINATE_LOCATION, 54.5260, 15.2551)],
+            Property.INSTANCE_OF: [create_entity_claim(Property.INSTANCE_OF, "Q5107")],  # continent
+        },
     ),
     Geography(
         id="geo_france",
@@ -70,6 +75,12 @@ GEOGRAPHIES = [
         center_coordinate=Coordinate(latitude=46.2276, longitude=2.2137, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "France"}},
+        descriptions={"en": {"language": "en", "value": "France"}},
+        claims={
+            Property.COORDINATE_LOCATION: [create_coordinate_claim(Property.COORDINATE_LOCATION, 46.2276, 2.2137)],
+            Property.INSTANCE_OF: [create_entity_claim(Property.INSTANCE_OF, "Q6256")],  # country
+        },
     ),
     Geography(
         id="geo_paris",
@@ -80,6 +91,12 @@ GEOGRAPHIES = [
         center_coordinate=Coordinate(latitude=48.8566, longitude=2.3522, elevation=None),
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "Paris"}},
+        descriptions={"en": {"language": "en", "value": "Capital of France"}},
+        claims={
+            Property.COORDINATE_LOCATION: [create_coordinate_claim(Property.COORDINATE_LOCATION, 48.8566, 2.3522)],
+            Property.INSTANCE_OF: [create_entity_claim(Property.INSTANCE_OF, "Q515")],  # city
+        },
     ),
     Geography(
         id="geo_normandy",
@@ -123,7 +140,7 @@ GEOGRAPHIES = [
     ),
 ]
 
-# People (examples)
+# People (examples) - now with claims
 PEOPLE = [
     Person(
         id="person_napoleon",
@@ -137,6 +154,13 @@ PEOPLE = [
         nationalities=["French"],
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "Napoleon Bonaparte"}},
+        descriptions={"en": {"language": "en", "value": "French military leader and emperor"}},
+        claims={
+            Property.DATE_OF_BIRTH: [create_time_claim(Property.DATE_OF_BIRTH, "1769-08-15", precision=11)],
+            Property.DATE_OF_DEATH: [create_time_claim(Property.DATE_OF_DEATH, "1821-05-05", precision=11)],
+            Property.INSTANCE_OF: [create_entity_claim(Property.INSTANCE_OF, "Q5")],  # human
+        },
     ),
     Person(
         id="person_churchill",
@@ -150,6 +174,13 @@ PEOPLE = [
         nationalities=["British"],
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "Winston Churchill"}},
+        descriptions={"en": {"language": "en", "value": "British Prime Minister during WWII"}},
+        claims={
+            Property.DATE_OF_BIRTH: [create_time_claim(Property.DATE_OF_BIRTH, "1874-11-30", precision=11)],
+            Property.DATE_OF_DEATH: [create_time_claim(Property.DATE_OF_DEATH, "1965-01-24", precision=11)],
+            Property.INSTANCE_OF: [create_entity_claim(Property.INSTANCE_OF, "Q5")],  # human
+        },
     ),
     Person(
         id="person_joan",
@@ -161,6 +192,13 @@ PEOPLE = [
         nationalities=["French"],
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "Joan of Arc"}},
+        descriptions={"en": {"language": "en", "value": "French heroine and military leader"}},
+        claims={
+            Property.DATE_OF_BIRTH: [create_time_claim(Property.DATE_OF_BIRTH, "1412-01-06", precision=11)],
+            Property.DATE_OF_DEATH: [create_time_claim(Property.DATE_OF_DEATH, "1431-05-30", precision=11)],
+            Property.INSTANCE_OF: [create_entity_claim(Property.INSTANCE_OF, "Q5")],  # human
+        },
     ),
     Person(
         id="person_caesar",
@@ -208,7 +246,7 @@ PEOPLE = [
     ),
 ]
 
-# Events (examples) with cross references to PEOPLE and GEOGRAPHIES
+# Events (examples) with cross references to PEOPLE and GEOGRAPHIES - now with claims
 EVENTS = [
     Event(
         id="event_french_revolution",
@@ -229,6 +267,13 @@ EVENTS = [
         confidence=0.85,
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "French Revolution"}},
+        descriptions={"en": {"language": "en", "value": "Period of radical social and political change in France (1789–1799)"}},
+        claims={
+            Property.START_TIME: [create_time_claim(Property.START_TIME, "1789-05-05", precision=10)],
+            Property.END_TIME: [create_time_claim(Property.END_TIME, "1799-11-09", precision=10)],
+            Property.LOCATION: [create_entity_claim(Property.LOCATION, "geo_france")],
+        },
     ),
     Event(
         id="event_waterloo",
@@ -250,6 +295,12 @@ EVENTS = [
         confidence=0.9,
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "Battle of Waterloo"}},
+        descriptions={"en": {"language": "en", "value": "Decisive battle near Waterloo in 1815 ending Napoleon's rule."}},
+        claims={
+            Property.START_TIME: [create_time_claim(Property.START_TIME, "1815-06-18", precision=11)],
+            Property.LOCATION: [create_entity_claim(Property.LOCATION, "geo_waterloo")],
+        },
     ),
     Event(
         id="event_wwii",
@@ -273,6 +324,12 @@ EVENTS = [
         confidence=0.95,
         created_by="sample_data",
         last_modified_by="sample_data",
+        labels={"en": {"language": "en", "value": "World War II"}},
+        descriptions={"en": {"language": "en", "value": "Global war from 1939 to 1945"}},
+        claims={
+            Property.START_TIME: [create_time_claim(Property.START_TIME, "1939-09-01", precision=11)],
+            Property.END_TIME: [create_time_claim(Property.END_TIME, "1945-09-02", precision=11)],
+        },
     ),
     Event(
         id="event_hastings",

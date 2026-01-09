@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from .base import BaseEntity
 from .sources import SourceAttribution
+from .claims_utils import Property, extract_time_from_claim, extract_entity_id_from_claim, extract_coordinate_from_claim
 
 
 class DateRange(BaseModel):
@@ -46,18 +47,80 @@ class GeographicReference(BaseModel):
 
 
 class Event(BaseEntity):
-    """Represents a historical or geographical event."""
+    """Represents a historical or geographical event.
+    
+    Supports both traditional flat fields and Wikidata-style claims.
+    When claims are present, computed properties read from claims.
+    """
 
-    title: str = Field(..., description="Title of the event")
-    description: str = Field(..., description="Detailed description")
-    start_date: DateRange = Field(..., description="When the event started")
-    end_date: Optional[DateRange] = Field(None, description="When the event ended")
+    title: str = Field(..., description="Title of the event (or use labels from claims)")
+    description: str = Field(..., description="Detailed description - computed from claims if available")
+    start_date: DateRange = Field(..., description="When the event started - computed from claims if available")
+    end_date: Optional[DateRange] = Field(None, description="When the event ended - computed from claims if available")
     locations: List[GeographicReference] = Field(
-        default_factory=list, description="Geographic locations associated with event"
+        default_factory=list, description="Geographic locations - computed from claims if available"
     )
     related_people: List[PersonReference] = Field(
-        default_factory=list, description="People associated with this event"
+        default_factory=list, description="People associated with this event - computed from claims if available"
     )
+    
+    def get_computed_title(self) -> str:
+        """Get title from label if available, otherwise use title field."""
+        label = self.get_label()
+        return label if label else self.title
+    
+    def get_computed_description(self) -> str:
+        """Get description from claims if available."""
+        desc = self.get_description()
+        return desc if desc else self.description
+    
+    def get_computed_start_date(self) -> DateRange:
+        """Get start date from claims (P580, P585, or P571) if available."""
+        # Try P580 (start time) first
+        claim = self.get_best_claim(Property.START_TIME)
+        if claim:
+            date_str = extract_time_from_claim(claim)
+            if date_str:
+                return DateRange(start_date=date_str, precision="day" if len(date_str) >= 10 else "year")
+        
+        # Try P585 (point in time)
+        claim = self.get_best_claim(Property.POINT_IN_TIME)
+        if claim:
+            date_str = extract_time_from_claim(claim)
+            if date_str:
+                return DateRange(start_date=date_str, precision="day" if len(date_str) >= 10 else "year")
+        
+        # Try P571 (inception)
+        claim = self.get_best_claim(Property.INCEPTION)
+        if claim:
+            date_str = extract_time_from_claim(claim)
+            if date_str:
+                return DateRange(start_date=date_str, precision="day" if len(date_str) >= 10 else "year")
+        
+        return self.start_date
+    
+    def get_computed_end_date(self) -> Optional[DateRange]:
+        """Get end date from claims (P582) if available."""
+        claim = self.get_best_claim(Property.END_TIME)
+        if claim:
+            date_str = extract_time_from_claim(claim)
+            if date_str:
+                return DateRange(start_date=date_str, end_date=date_str, precision="day" if len(date_str) >= 10 else "year")
+        return self.end_date
+    
+    def get_locations_from_claims(self) -> List[GeographicReference]:
+        """Get locations from claims (P276)."""
+        location_claims = self.get_claims(Property.LOCATION)
+        locations = []
+        for claim in location_claims:
+            entity_id = extract_entity_id_from_claim(claim)
+            if entity_id:
+                # TODO: Resolve entity to get name and coordinates
+                locations.append(GeographicReference(
+                    geography_id=f"geo_{entity_id}",
+                    name=entity_id  # Would need entity resolution
+                ))
+        return locations if locations else self.locations
     
     # Multi-source tracking
     sources: List[SourceAttribution] = Field(

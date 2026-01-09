@@ -24,6 +24,9 @@ def test_event_creation():
     assert event.id == "event_001"
     assert event.title == "Test Event"
     assert event.created_by == "test_user"
+    # Verify claims structure exists
+    assert isinstance(event.claims, dict)
+    assert isinstance(event.labels, dict)
 
 
 def test_person_creation():
@@ -43,6 +46,9 @@ def test_person_creation():
     )
     assert person.id == "person_001"
     assert person.name == "Albert Einstein"
+    # Verify claims structure exists
+    assert isinstance(person.claims, dict)
+    assert isinstance(person.labels, dict)
 
 
 def test_geography_creation():
@@ -64,6 +70,9 @@ def test_geography_creation():
     )
     assert geography.id == "geo_001"
     assert geography.geography_type == GeographyType.COUNTRY
+    # Verify claims structure exists
+    assert isinstance(geography.claims, dict)
+    assert isinstance(geography.labels, dict)
 
 
 def test_dimension_creation():
@@ -133,3 +142,48 @@ def test_event_with_multi_source():
     )
     assert len(event.sources) == 2
     assert event.sources[0].source_name == "Wikipedia"
+
+
+def test_entity_with_claims():
+    """Test entity with Wikidata-style claims."""
+    from python_aws_starter.models.claims_utils import Property, create_time_claim
+    
+    person = Person(
+        id="person_test",
+        name="Test Person",
+        description="A test person",
+        created_by="test",
+        last_modified_by="test",
+        claims={
+            Property.DATE_OF_BIRTH: [create_time_claim(Property.DATE_OF_BIRTH, "1990-01-01", precision=11)],
+        },
+        labels={"en": {"language": "en", "value": "Test Person"}},
+    )
+    
+    assert person.get_label() == "Test Person"
+    assert len(person.get_claims(Property.DATE_OF_BIRTH)) == 1
+    assert person.get_computed_birth_date() == "1990-01-01"
+
+
+def test_entity_claims_access():
+    """Test accessing entity data through claims."""
+    from python_aws_starter.models.claims_utils import Property, create_time_claim, create_coordinate_claim
+    
+    geography = Geography(
+        id="geo_test",
+        name="Test City",
+        geography_type=GeographyType.CITY,
+        description="A test city",
+        created_by="test",
+        last_modified_by="test",
+        claims={
+            Property.COORDINATE_LOCATION: [create_coordinate_claim(Property.COORDINATE_LOCATION, 40.7128, -74.0060)],
+        },
+        labels={"en": {"language": "en", "value": "Test City"}},
+    )
+    
+    assert geography.get_label() == "Test City"
+    coord = geography.get_computed_center_coordinate()
+    assert coord is not None
+    assert coord.latitude == 40.7128
+    assert coord.longitude == -74.0060
