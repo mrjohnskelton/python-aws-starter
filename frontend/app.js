@@ -13,33 +13,82 @@ function setSummary(count, dim){
 }
 
 function renderResults(results, dim){
+  console.log(`[renderResults] Rendering ${results ? results.length : 0} results for ${dim}`, results);
   lastResults = results || [];
+  if(!listEl){
+    console.error('[renderResults] listEl is null!');
+    return;
+  }
   listEl.innerHTML = '';
-  if(!results || results.length===0){ setSummary(0, dim); return }
+  if(!results || results.length===0){ 
+    console.log('[renderResults] No results to display');
+    setSummary(0, dim); 
+    return;
+  }
   setSummary(results.length, dim);
   results.forEach((item, idx)=>{
-    const li = document.createElement('li');
-    li.setAttribute('role','listitem');
-    li.tabIndex = 0;
-    li.className = 'card';
-    li.dataset.index = idx;
-    li.innerHTML = cardInner(item, dim);
-    li.addEventListener('click', ()=>selectItem(idx, li));
-    li.addEventListener('keypress', (e)=>{ if(e.key==='Enter') selectItem(idx, li)});
-    listEl.appendChild(li);
-  })
+    try {
+      const li = document.createElement('li');
+      li.setAttribute('role','listitem');
+      li.tabIndex = 0;
+      li.className = 'card';
+      li.dataset.index = idx;
+      li.innerHTML = cardInner(item, dim);
+      li.addEventListener('click', ()=>selectItem(idx, li));
+      li.addEventListener('keypress', (e)=>{ if(e.key==='Enter') selectItem(idx, li)});
+      listEl.appendChild(li);
+    } catch(err) {
+      console.error(`[renderResults] Error rendering item ${idx}:`, err, item);
+    }
+  });
+  console.log(`[renderResults] Rendered ${results.length} items to listEl`);
 }
 
 function cardInner(item, dim){
   // Zoom controls reduce details shown
   const detail = Math.max(0, zoom);
-  let html = `<strong>${item.id || item.name || item.title || dim}</strong>`;
+  
+  // Handle WikibaseEntity structure (Wikidata native) - labels instead of name/title
+  let displayName = item.name || item.title;
+  if (!displayName && item.labels && item.labels.en) {
+    displayName = item.labels.en.value || item.labels.en;
+  }
+  if (!displayName && item.labels) {
+    // Try first available language
+    const firstLang = Object.keys(item.labels)[0];
+    if (firstLang && item.labels[firstLang]) {
+      displayName = item.labels[firstLang].value || item.labels[firstLang];
+    }
+  }
+  displayName = displayName || item.id || dim;
+  
+  // Handle descriptions - WikibaseEntity uses descriptions.en.value
+  let displayDesc = item.description || item.summary || item.city || '';
+  if (!displayDesc && item.descriptions && item.descriptions.en) {
+    displayDesc = item.descriptions.en.value || item.descriptions.en;
+  }
+  if (!displayDesc && item.descriptions) {
+    const firstLang = Object.keys(item.descriptions)[0];
+    if (firstLang && item.descriptions[firstLang]) {
+      displayDesc = item.descriptions[firstLang].value || item.descriptions[firstLang];
+    }
+  }
+  
+  let html = `<strong>${displayName}</strong>`;
   if(detail>0){
-    html += `<div class="muted">${(item.description || item.summary || item.city || '')}</div>`;
+    html += `<div class="muted">${displayDesc}</div>`;
   }
   if(detail>1){
     html += `<div style="margin-top:.5rem;font-size:.85rem">`;
-    for(const k of Object.keys(item).slice(0,4)) html += `<div><small>${k}</small>: ${escapeHTML(String(item[k]))}</div>`;
+    // Show QID for Wikidata entities
+    if(item.id && item.id.startsWith('Q')) {
+      html += `<div><small>QID</small>: ${item.id}</div>`;
+    }
+    for(const k of Object.keys(item).slice(0,3)) {
+      if(k !== 'labels' && k !== 'descriptions' && k !== 'aliases') {
+        html += `<div><small>${k}</small>: ${escapeHTML(String(item[k]))}</div>`;
+      }
+    }
     html += `</div>`;
   }
   return html;
@@ -64,16 +113,33 @@ function selectItem(idx, el){
 
 async function search(dim, q){
   try{
-    const url = new URL(`${API_BASE}/search/${encodeURIComponent(dim)}`);
+    // Map frontend dimension names to API endpoint names
+    const dimMap = {
+      'geography': 'geographies',
+      'people': 'people',
+      'events': 'events'
+    };
+    const apiDim = dimMap[dim] || dim;
+    const url = new URL(`${API_BASE}/search/${encodeURIComponent(apiDim)}`);
     if(q) url.searchParams.set('q', q);
+    console.log(`[search] Fetching from ${url}`);
     const res = await fetch(url);
-    if(!res.ok) throw new Error(await res.text())
+    if(!res.ok) {
+      const errorText = await res.text();
+      console.error(`[search] API error: ${res.status} ${errorText}`);
+      throw new Error(errorText);
+    }
     const body = await res.json();
-    renderResults(body.results || body || [], dim);
-    updateVisualizations(body.results || body || [], dim);
+    const results = body.results || body || [];
+    console.log(`[search] Received ${results.length} results for ${dim} (API: ${apiDim})`, results);
+    if(results.length > 0) {
+      console.log(`[search] First result:`, results[0]);
+    }
+    renderResults(results, dim);
+    // updateVisualizations is called inside renderResults wrapper
   }catch(err){
     summaryEl.textContent = 'Error fetching results';
-    console.error(err);
+    console.error('[search] Error:', err);
   }
 }
 
@@ -269,15 +335,27 @@ $('#loadLocal').addEventListener('click', async ()=>{
 // when rendering results from API, also update map and timeline
 const originalRenderResults = renderResults;
 renderResults = function(results, dim){
-  originalRenderResults(results, dim);
-  // if geography dimension requested, build geo index
-  // attempt to fetch geographies once
-  fetch(`${API_BASE}/search/geographies`).then(r=>r.json()).then(body=>{
-    if(body && body.results){ body.results.forEach(g=>geoIndex[g.id]=g) }
-    addMapMarkers(results || []);
-    renderTimeline(results || []);
-  }).catch(()=>{
-    addMapMarkers(results || []);
-    renderTimeline(results || []);
-  });
+  try {
+    console.log(`[renderResults wrapper] Called with ${results ? results.length : 0} results for ${dim}`);
+    originalRenderResults(results, dim);
+    // if geography dimension requested, build geo index
+    // attempt to fetch geographies once to populate geoIndex
+    if(dim === 'geographies' || (results && results.some(item => item.locations && item.locations.length > 0))){
+      fetch(`${API_BASE}/search/geographies`).then(r=>r.json()).then(body=>{
+        const geos = body.results || body || [];
+        geos.forEach(g=>geoIndex[g.id]=g);
+        // Update visualizations with geo index now populated
+        updateVisualizations(results || [], dim);
+      }).catch((err)=>{
+        console.error('[renderResults wrapper] Error fetching geographies:', err);
+        // Still update visualizations even if geo fetch fails
+        updateVisualizations(results || [], dim);
+      });
+    } else {
+      // Update visualizations immediately if no geo fetch needed
+      updateVisualizations(results || [], dim);
+    }
+  } catch(err) {
+    console.error('[renderResults wrapper] Error:', err);
+  }
 }

@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from python_aws_starter.repositories.in_memory import InMemoryRepository
 from python_aws_starter.config import config
@@ -13,6 +14,15 @@ logging.basicConfig(level=numeric_level, format="%(asctime)s %(levelname)s %(nam
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Timeline Pivot API")
+
+# Add CORS middleware to allow frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize a demo repository from test fixtures (suitable for local demo/dev)
 _repo = InMemoryRepository(events=sd.get_events(), people=sd.get_people(), geographies=sd.get_geographies())
@@ -47,13 +57,14 @@ def search_events(
     # Search Wikidata if DATA_SOURCE is not "local" and we have a query
     if config.data_source != "local" and search_query:
         try:
-            wikidata_results = wd.search_wikidata_events(search_query, limit=20)
-            results.extend(wikidata_results)
-            logger.info(f"Found {len(wikidata_results)} events from Wikidata for query: {search_query}")
+            # Use native WikibaseEntity structure for Wikidata searches
+            wikidata_results = wd.search_wikidata_entities_as_wikibase(search_query, limit=20)
+            results.extend([r.model_dump() for r in wikidata_results])
+            logger.info(f"Found {len(wikidata_results)} entities from Wikidata for query: {search_query}")
         except Exception as e:
             logger.error(f"Error searching Wikidata: {e}")
     
-    # Also search local repository
+    # Also search local repository (returns Event models)
     center = None
     if center_lat is not None and center_lon is not None:
         center = (center_lat, center_lon)
@@ -65,9 +76,9 @@ def search_events(
         center_coord=center,
         within_km=within_km,
     )
-    results.extend(local_results)
+    results.extend([r.model_dump() for r in local_results])
     
-    return [r.model_dump() for r in results]
+    return results
 
 
 @app.get("/search/people")
@@ -84,17 +95,18 @@ def search_people(
     # Search Wikidata if DATA_SOURCE is not "local" and we have a query
     if config.data_source != "local" and search_query:
         try:
-            wikidata_results = wd.search_wikidata_people(search_query, limit=20)
-            results.extend(wikidata_results)
-            logger.info(f"Found {len(wikidata_results)} people from Wikidata for query: {search_query}")
+            # Use native WikibaseEntity structure for Wikidata searches
+            wikidata_results = wd.search_wikidata_entities_as_wikibase(search_query, limit=20)
+            results.extend([r.model_dump() for r in wikidata_results])
+            logger.info(f"Found {len(wikidata_results)} entities from Wikidata for query: {search_query}")
         except Exception as e:
             logger.error(f"Error searching Wikidata: {e}")
     
-    # Also search local repository
+    # Also search local repository (returns Person models)
     local_results = _repo.search_people(text=search_query, related_event_id=related_event_id)
-    results.extend(local_results)
+    results.extend([r.model_dump() for r in local_results])
     
-    return [r.model_dump() for r in results]
+    return results
 
 
 @app.get("/search/geographies")
@@ -113,20 +125,21 @@ def search_geographies(
     # Search Wikidata if DATA_SOURCE is not "local" and we have a query
     if config.data_source != "local" and search_query:
         try:
-            wikidata_results = wd.search_wikidata_geographies(search_query, limit=20)
-            results.extend(wikidata_results)
-            logger.info(f"Found {len(wikidata_results)} geographies from Wikidata for query: {search_query}")
+            # Use native WikibaseEntity structure for Wikidata searches
+            wikidata_results = wd.search_wikidata_entities_as_wikibase(search_query, limit=20)
+            results.extend([r.model_dump() for r in wikidata_results])
+            logger.info(f"Found {len(wikidata_results)} entities from Wikidata for query: {search_query}")
         except Exception as e:
             logger.error(f"Error searching Wikidata: {e}")
     
-    # Also search local repository
+    # Also search local repository (returns Geography models)
     center = None
     if center_lat is not None and center_lon is not None:
         center = (center_lat, center_lon)
     local_results = _repo.search_geographies(text=search_query, center_coord=center, within_km=within_km)
-    results.extend(local_results)
+    results.extend([r.model_dump() for r in local_results])
     
-    return [r.model_dump() for r in results]
+    return results
 
 
 # Claims-based query endpoints
@@ -196,6 +209,94 @@ def get_entity_claim(entity_id: str, property_id: str):
         raise HTTPException(status_code=404, detail=f"No claim found for property {property_id} on entity {entity_id}")
     
     return {"entity_id": entity_id, "property_id": property_id, "claim": claim.model_dump()}
+
+
+@app.get("/wikidata/entity/{qid}")
+def get_wikidata_entity_by_qid(qid: str):
+    """Fetch full entity data from Wikidata by QID using REST API.
+    
+    This endpoint is used for linking - when you have a QID from a search result
+    and need full entity data (claims, etc.). Initial searches should use the
+    search endpoints which use Elasticsearch.
+    
+    Example: /wikidata/entity/Q123
+    """
+    try:
+        # Extract QID if it's in the format "person_wikidata_Q123"
+        if "_" in qid:
+            parts = qid.split("_")
+            qid = parts[-1] if parts[-1].startswith("Q") else qid
+        
+        # Fetch full entity using REST API
+        entity_data = wd.get_wikidata_entity(qid)
+        if not entity_data:
+            raise HTTPException(status_code=404, detail=f"Entity {qid} not found in Wikidata")
+        
+        # Determine entity type and convert
+        claims = entity_data.get("claims", {})
+        instance_claims = claims.get("P31", [])
+        
+        # Check if it's a person
+        is_person = False
+        for inst_claim in instance_claims:
+            try:
+                inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(inst_entity, dict) and inst_entity.get("id") == "Q5":  # human
+                    is_person = True
+                    break
+            except (KeyError, TypeError):
+                continue
+        
+        if is_person:
+            person = wd.wikidata_to_person(entity_data, qid)
+            if person:
+                return person.model_dump()
+        
+        # Check if it's an event
+        is_event = False
+        for inst_claim in instance_claims:
+            try:
+                inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(inst_entity, dict):
+                    inst_qid = inst_entity.get("id", "")
+                    if inst_qid in ["Q1656682", "Q1190554", "Q1983062"]:  # event, occurrence, historical event
+                        is_event = True
+                        break
+            except (KeyError, TypeError):
+                continue
+        
+        if is_event:
+            event = wd.wikidata_to_event(entity_data, qid)
+            if event:
+                return event.model_dump()
+        
+        # Check if it's a geography (has coordinates or geographic type)
+        has_coords = "P625" in claims
+        is_geo = False
+        for inst_claim in instance_claims:
+            try:
+                inst_entity = inst_claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+                if isinstance(inst_entity, dict):
+                    inst_qid = inst_entity.get("id", "")
+                    if inst_qid in ["Q6256", "Q515", "Q5107", "Q15284", "Q23442"]:  # geographic types
+                        is_geo = True
+                        break
+            except (KeyError, TypeError):
+                continue
+        
+        if is_geo or has_coords:
+            geography = wd.wikidata_to_geography(entity_data, qid)
+            if geography:
+                return geography.model_dump()
+        
+        # If we can't determine type, return raw entity data
+        return entity_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching Wikidata entity {qid}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching entity: {str(e)}")
 
 
 @app.get("/search/by-property")
